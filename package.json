@@ -65,8 +65,8 @@
     },
       "publish": [
       {
-        "provider": "github",
         "owner": "soulux692",
+        "repo": "ink-arena"
         "repo": "ink-arena"
       }
     ]
