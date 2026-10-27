@@ -63,12 +63,13 @@
       "shortcutName": "Ink Arena Remastered",
       "runAfterFinish": true
     },
-    "publish": [
-"publish": [
-  {
-    "provider": "github",
-    "owner": "soulux692",
-    "repo": "ink-arena"
+      "publish": [
+      {
+        "provider": "github",
+        "owner": "soulux692",
+        "repo": "ink-arena"
+      }
+    ]
   }
-]
+}
 
