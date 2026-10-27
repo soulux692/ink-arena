@@ -1,7 +1,7 @@
 
 name: Build and Release Ink Arena Remastered
 
-on:
+'on':
   push:
     tags:
       - "v*"
@@ -12,7 +12,6 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
