@@ -3,8 +3,11 @@ name: Build and Release Ink Arena Remastered
 
 'on':
   push:
+    branches:
+      - main
     tags:
       - "v*"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -12,6 +15,7 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -28,6 +32,7 @@ jobs:
         run: npm run dist
 
       - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
