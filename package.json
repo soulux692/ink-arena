@@ -1,8 +1,11 @@
+
 {
   "name": "ink-arena-remastered",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
+  "description": "Ink Arena Remastered desktop game",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -31,8 +34,6 @@
     "electron": "^35.0.0",
     "electron-builder": "^26.0.12"
   },
-  "description": "Ink Arena Remastered desktop game",
-  "main": "electron/main.cjs",
   "build": {
     "appId": "com.inkarena.remastered",
     "productName": "Ink Arena Remastered",
@@ -48,9 +49,7 @@
       "target": [
         {
           "target": "nsis",
-          "arch": [
-            "x64"
-          ]
+          "arch": ["x64"]
         }
       ],
       "artifactName": "InkArenaRemastered-Setup-${version}.${ext}"
@@ -63,13 +62,12 @@
       "shortcutName": "Ink Arena Remastered",
       "runAfterFinish": true
     },
-      "publish": [
+    "publish": [
       {
+        "provider": "github",
         "owner": "soulux692",
-        "repo": "ink-arena"
         "repo": "ink-arena"
       }
     ]
   }
 }
-
