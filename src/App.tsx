@@ -2,9 +2,12 @@ declare global {
   interface Window {
     inkDesktop?: {
       setDesktopTear?: (active: boolean) => Promise<boolean>;
-      checkForUpdates?: () => Promise<{ status: string; message?: string }>;
+      checkForUpdates?: () => Promise<{ status: string; version?: string; message?: string }>;
+      startUpdate?: () => Promise<{ ok: boolean; canceled?: boolean; upToDate?: boolean; manual?: boolean; message?: string }>;
+      forceDownloadUpdate?: () => Promise<{ ok: boolean; canceled?: boolean; upToDate?: boolean; manual?: boolean; message?: string }>;
+      openDownloadsFolder?: () => Promise<{ ok: boolean }>;
       importUpdateArchive?: () => Promise<{ ok: boolean; canceled?: boolean; message?: string }>;
-      onUpdateProgress?: (callback: (data: { stage: string; message: string }) => void) => void;
+      onUpdateProgress?: (callback: (data: { stage: string; message: string; percent?: number; version?: string }) => void) => void;
     };
   }
 }
@@ -110,29 +113,123 @@ export default function App() {
   const [cutFx, setCutFx] = useState<{ id: number; tearing: boolean } | null>(null);
   const lastPageCut = useRef(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [updateBusy, setUpdateBusy] = useState(false);
+  const toastTimer = useRef<number | undefined>(undefined);
+  const showToast = (msg: string, ms = 4200) => {
+    setToast(msg);
+    window.clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => setToast(null), ms);
+  };
+
+  // ---- in-game updater: check → dialog with progress → download → install ----
+  type UpdateProgress = { stage: string; message?: string; percent?: number; version?: string };
+  const [updateOpen, setUpdateOpen] = useState(false);
+  const [updateProgress, setUpdateProgress] = useState<UpdateProgress | null>(null);
+  const [updateAvailable, setUpdateAvailable] = useState<{ version: string } | null>(null);
+  const [updateNote, setUpdateNote] = useState<string | null>(null);
+  const updateBusy = !!updateProgress && ["check", "download", "extract", "build", "install"].includes(updateProgress.stage);
+  const gameVersion = "1.0.3";
+
+  const closeUpdateDialog = () => {
+    if (updateBusy) return; // never hide a running download
+    setUpdateOpen(false);
+    setUpdateProgress(null);
+    setUpdateAvailable(null);
+    setUpdateNote(null);
+  };
+
+  const startOnlineUpdate = async (force = false) => {
+    const api = window.inkDesktop;
+    if (!api?.startUpdate) return;
+    setUpdateNote(null);
+    setUpdateProgress({ stage: "check", message: "Соединяюсь с сервером обновлений…" });
+    try {
+      const result = force ? await api.forceDownloadUpdate?.() : await api.startUpdate();
+      if (result?.upToDate) {
+        setUpdateProgress(null);
+        setUpdateAvailable(null);
+        setUpdateNote(result.message || `Уже установлена последняя версия ${gameVersion}.`);
+      } else if (result && !result.ok && !result.canceled) {
+        setUpdateProgress({ stage: "error", message: result.message || "Не удалось скачать обновление." });
+      } else if (result?.ok) {
+        setUpdateProgress({ stage: result.manual ? "ready" : "download", message: result.message || "" });
+        if (result.manual) setUpdateNote(result.message || "");
+      }
+    } catch (error) {
+      setUpdateProgress({ stage: "error", message: "Ошибка обновления: " + String(error) });
+    }
+  };
+
+  const openUpdateDialog = async () => {
+    setUpdateOpen(true);
+    setUpdateNote(null);
+    setUpdateAvailable(null);
+    setUpdateProgress(null);
+    const api = window.inkDesktop;
+    if (!api?.checkForUpdates) {
+      setUpdateNote("Онлайн-обновление доступно в установленной desktop-версии игры. Здесь можно только открыть ZIP-архив с обновлением.");
+      return;
+    }
+    setUpdateProgress({ stage: "check", message: "Проверяю обновления…" });
+    try {
+      const res = await api.checkForUpdates();
+      if (res?.status === "available") {
+        setUpdateAvailable({ version: res.version || "?" });
+        setUpdateProgress(null);
+      } else if (res?.status === "up-to-date") {
+        setUpdateProgress(null);
+        setUpdateNote(`Уже установлена последняя версия ${res.version || gameVersion}.`);
+      } else if (res?.status === "dev") {
+        setUpdateProgress(null);
+        setUpdateNote("Это браузерная/разработочная сборка: онлайн-обновления работают только в установленном приложении.");
+      } else {
+        setUpdateProgress(null);
+        setUpdateNote(res?.message ? "Сервер обновлений недоступен: " + res.message : "Сервер обновлений пока не ответил. Попробуй «Скачать обновление» — игра найдёт последний релиз сама.");
+      }
+    } catch (error) {
+      setUpdateProgress(null);
+      setUpdateNote("Не удалось проверить обновления: " + String(error));
+    }
+  };
 
   const importUpdateArchive = async () => {
     if (!window.inkDesktop?.importUpdateArchive) {
-      setToast("Обновление ZIP доступно только в установленной desktop-версии игры.");
+      showToast("Обновление ZIP доступно только в установленной desktop-версии игры.");
       return;
     }
-    setUpdateBusy(true);
-    setToast("Открой выбор ZIP-архива обновления…");
+    setUpdateProgress({ stage: "extract", message: "Открой выбор ZIP-архива обновления…" });
     try {
       const result = await window.inkDesktop.importUpdateArchive();
-      if (result?.message) setToast(result.message);
-      else if (result?.canceled) setToast("Обновление отменено.");
+      if (result?.canceled) setUpdateProgress(null);
+      else if (result?.message) setUpdateProgress({ stage: result.ok ? "ready" : "error", message: result.message });
+      else setUpdateProgress(null);
     } catch (error) {
-      setToast("Не удалось обработать архив: " + String(error));
-    } finally {
-      setUpdateBusy(false);
+      setUpdateProgress({ stage: "error", message: "Не удалось обработать архив: " + String(error) });
     }
   };
 
   useEffect(() => {
     window.inkDesktop?.onUpdateProgress?.((data) => {
-      if (data?.message) setToast(data.message);
+      if (!data) return;
+      if (data.stage === "idle") {
+        setUpdateProgress((p) => (p && ["download", "extract", "install"].includes(p.stage) ? p : null));
+        return;
+      }
+      if (data.stage === "available" && data.version) {
+        setUpdateAvailable({ version: data.version });
+        setUpdateProgress(null);
+        setUpdateOpen(true);
+        return;
+      }
+      if (data.stage === "ready") {
+        setUpdateProgress({ stage: "ready", message: data.message || "", version: data.version });
+        setUpdateOpen(true);
+        return;
+      }
+      if (data.stage === "error") {
+        setUpdateProgress({ stage: "error", message: data.message || "Ошибка обновления" });
+        return;
+      }
+      setUpdateProgress({ stage: data.stage, message: data.message, percent: data.percent });
     });
   }, []);
   const [queenFx, setQueenFx] = useState<PublicState["queenCut"]>(null);
@@ -534,7 +631,7 @@ export default function App() {
               onEndless={() => { goLandscape(); g()?.startEndless(); }}
               onSettings={() => setShowSettings(true)}
               onCoop={() => setShowCoop(true)}
-              onUpdate={importUpdateArchive}
+              onUpdate={openUpdateDialog}
             />
           )}
           {st === "levels" && (
@@ -660,6 +757,68 @@ export default function App() {
                 g()?.goLevels();
               }}
             />
+          </Modal>
+
+          <Modal open={updateOpen} onClose={closeUpdateDialog} dismiss={!updateBusy}>
+            <div className="card ink updater-card rise">
+              <div className="updater-head">
+                <Disp as="h3">обновление игры</Disp>
+                <span className="hand updater-ver">текущая версия {gameVersion}</span>
+              </div>
+              {updateProgress && ["check", "download", "extract", "build", "install"].includes(updateProgress.stage) && (
+                <>
+                  <div className="hand updater-status">
+                    {updateProgress.stage === "check" && "Проверяю сервер обновлений…"}
+                    {updateProgress.stage === "download" && `Скачиваю обновление${updateProgress.percent != null && updateProgress.percent >= 0 ? ` — ${updateProgress.percent}%` : "…"}`}
+                    {updateProgress.stage === "extract" && "Распаковываю архив…"}
+                    {updateProgress.stage === "build" && "Собираю установщик из архива… это может занять пару минут."}
+                    {updateProgress.stage === "install" && "Запускаю установщик…"}
+                  </div>
+                  {updateProgress.message && <div className="hand updater-note">{updateProgress.message}</div>}
+                  <Bar value={updateProgress.stage === "download" ? Math.max(0, updateProgress.percent ?? 0) / 100 : 0} className={updateProgress.stage === "download" ? "" : "bar-indet"} />
+                </>
+              )}
+              {updateProgress?.stage === "error" && <div className="hand updater-error">✗ {updateProgress.message || "Что-то пошло не так."}</div>}
+              {updateAvailable && !updateBusy && (
+                <div className="hand updater-status">
+                  Доступна новая версия: <b>{updateAvailable.version}</b>. Скачаешь прямо сейчас?
+                </div>
+              )}
+              {updateProgress?.stage === "ready" && !updateBusy && (
+                <div className="hand updater-status">✓ {updateProgress.message || "Обновление готово к установке."}</div>
+              )}
+              {updateNote && !updateBusy && <div className="hand updater-note">{updateNote}</div>}
+              {!updateBusy && !updateAvailable && updateProgress?.stage !== "ready" && !updateNote && (
+                <div className="hand updater-note">Игра проверит сервер и, если есть свежий релиз, скачает его сама — прямо здесь, без браузера.</div>
+              )}
+              <div className="updater-actions">
+                {updateAvailable && !updateBusy && (
+                  <Btn variant="solid" size="lg" icon="refresh" onClick={() => void startOnlineUpdate(false)}>
+                    Скачать версию {updateAvailable.version}
+                  </Btn>
+                )}
+                {!updateBusy && updateProgress?.stage !== "ready" && !updateAvailable && (
+                  <Btn tab icon="refresh" onClick={() => void startOnlineUpdate(true)}>
+                    Всё равно скачать последний релиз
+                  </Btn>
+                )}
+                {updateProgress?.stage === "ready" && !updateBusy && (
+                  <Btn tab icon="arrow" onClick={() => void window.inkDesktop?.openDownloadsFolder?.()}>
+                    Открыть папку загрузки
+                  </Btn>
+                )}
+                {!updateBusy && (
+                  <Btn tab icon="book" onClick={() => void importUpdateArchive()}>
+                    Обновить из файла… (ZIP)
+                  </Btn>
+                )}
+                {!updateBusy && (
+                  <Btn tab onClick={closeUpdateDialog}>
+                    Позже
+                  </Btn>
+                )}
+              </div>
+            </div>
           </Modal>
 
           {state.coop.on && state.coop.started && state.mate && (
