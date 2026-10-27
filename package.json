@@ -64,11 +64,12 @@
       "runAfterFinish": true
     },
     "publish": [
-      {
-        "provider": "github",
-        "owner": "YOUR_GITHUB_USERNAME",
-        "repo": "YOUR_REPOSITORY"
-      }
-    ]
+"publish": [
+  {
+    "provider": "github",
+    "owner": "soulux692",
+    "repo": "ink-arena"
+  }
+]
   }
 }
