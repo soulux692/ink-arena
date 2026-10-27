@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ink Arena Remastered</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#111;color:#f3f0e8;font:16px "Segoe UI",sans-serif;overflow:hidden}
+main{padding:34px 42px;height:100vh;display:flex;flex-direction:column;justify-content:space-between;background:radial-gradient(ellipse at 80% 10%,#343434 0,#171717 45%,#101010 100%)}
+.logo{font-size:28px;font-weight:900;letter-spacing:2px}.logo span{color:#aaa}.tag{color:#aaa;margin-top:6px}
+h1{font-size:24px;margin:0 0 10px}.status{color:#c9c9c9;min-height:24px}.bar{height:9px;background:#353535;border-radius:8px;overflow:hidden;margin:18px 0 10px}.fill{height:100%;width:0;background:#f2f0e9;transition:width .35s}
+.meta{display:flex;justify-content:space-between;color:#929292;font-size:12px}.bottom{display:flex;justify-content:space-between;align-items:end;gap:20px}.hint{font-size:12px;color:#888;max-width:410px}.skip{border:1px solid #666;background:transparent;color:#eee;padding:10px 15px;cursor:pointer}
+</style></head>
+<body><main>
+<header><div class="logo">INK ARENA <span>REMASTERED</span></div><div class="tag">Рисованный хаос начинается здесь</div></header>
+<section><h1>Подготовка игры</h1><div class="status" id="status">Инициализация...</div><div class="bar"><div class="fill" id="fill"></div></div><div class="meta"><span id="detail">Проверяем конфигурацию компьютера</span><span id="percent">0%</span></div></section>
+<footer class="bottom"><div class="hint" id="hint">Проводится лёгкая проверка оборудования и выбор рекомендуемого профиля. Это не стресс-тест.</div><button class="skip" id="launch" hidden>Запустить игру</button></footer>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const steps=[
+ [12,'Проверяем компьютер','Читаем доступные сведения об оперативной памяти и процессоре...'],
+ [32,'Подбираем настройки','Выбираем предварительный графический профиль...'],
+ [55,'Готовим игровые ресурсы','Подготавливаем окно и локальные файлы игры...'],
+ [78,'Завершаем подготовку','Почти готово...'],
+ [94,'Запускаем арену','Открываем игру в отдельном окне...']
+];
+(async()=>{
+ let profile={tier:'unknown',totalRamGB:0,cpuThreads:0};
+ try{profile=await window.inkDesktop.getPcProfile()}catch(e){}
+ const start=Date.now();
+ for(let i=0;i<steps.length;i++){
+  const [p,title,detail]=steps[i];
+  $('status').textContent=title;$('detail').textContent=detail;$('fill').style.width=p+'%';$('percent').textContent=p+'%';
+  await new Promise(r=>setTimeout(r,650));
+ }
+ $('hint').textContent=`Профиль: ${profile.tier||'стандартный'} · RAM: ${profile.totalRamGB||'?'} ГБ · логических потоков CPU: ${profile.cpuThreads||'?'}. Настройки являются рекомендацией; тонкая настройка зависит от возможностей самой игры.`;
+ $('status').textContent='Готово!';$('detail').textContent='Можно играть';$('fill').style.width='100%';$('percent').textContent='100%';
+ await new Promise(r=>setTimeout(r,500));
+ await window.inkDesktop.launch();
+})().catch(e=>{$('status').textContent='Не удалось запустить игру';$('detail').textContent='Попробуйте переустановить приложение';$('launch').hidden=false;});
+$('launch').addEventListener('click',()=>window.inkDesktop.launch());
+</script></body></html>
