@@ -112,27 +112,34 @@ export default function App() {
   const [toast, setToast] = useState<string | null>(null);
   const [updateBusy, setUpdateBusy] = useState(false);
 
-  const importUpdateArchive = async () => {
-    if (!window.inkDesktop?.importUpdateArchive) {
-      setToast("Обновление ZIP доступно только в установленной desktop-версии игры.");
+  const checkForUpdates = async () => {
+    if (!window.inkDesktop?.checkForUpdates) {
+      setToast("Проверка обновлений доступна только в установленной desktop-версии.");
       return;
     }
     setUpdateBusy(true);
-    setToast("Открой выбор ZIP-архива обновления…");
+    setToast("Проверяем наличие обновлений...");
     try {
-      const result = await window.inkDesktop.importUpdateArchive();
-      if (result?.message) setToast(result.message);
-      else if (result?.canceled) setToast("Обновление отменено.");
+      const result = await window.inkDesktop.checkForUpdates();
+      if (result.status === "dev") setToast("В режиме разработки обновления не проверяются.");
+      else if (result.status === "unavailable") setToast("Не удалось проверить обновления: " + (result.message || "ошибка соединения"));
+      else setToast("Проверяем GitHub Releases...");
     } catch (error) {
-      setToast("Не удалось обработать архив: " + String(error));
+      setToast("Не удалось проверить обновления: " + String(error));
     } finally {
       setUpdateBusy(false);
     }
   };
 
   useEffect(() => {
-    window.inkDesktop?.onUpdateProgress?.((data) => {
-      if (data?.message) setToast(data.message);
+    window.inkDesktop?.onUpdateStatus?.((data) => {
+      if (!data) return;
+      if (data.stage === "checking") setToast("Проверяем наличие обновлений...");
+      else if (data.stage === "not-available") setToast("Установлена последняя версия игры.");
+      else if (data.stage === "available") setToast("Найдена версия " + data.version + ". Начинаем загрузку...");
+      else if (data.stage === "downloading") setToast("Загрузка обновления: " + (data.percent || 0) + "%");
+      else if (data.stage === "installing") setToast("Обновление загружено. Перезапускаем игру...");
+      else if (data.stage === "error") setToast("Ошибка обновления: " + (data.message || "неизвестная ошибка"));
     });
   }, []);
   const [queenFx, setQueenFx] = useState<PublicState["queenCut"]>(null);
@@ -539,7 +546,7 @@ export default function App() {
               onEndless={() => { goLandscape(); g()?.startEndless(); }}
               onSettings={() => setShowSettings(true)}
               onCoop={() => setShowCoop(true)}
-              onUpdate={importUpdateArchive}
+              onUpdate={checkForUpdates}
             />
           )}
           {st === "levels" && (
