@@ -2182,6 +2182,14 @@ export class Game {
     this.last = now;
     const t0 = performance.now();
     this.step(raw);
+    // Hard safety budgets: transient objects are cosmetic/projectile-only and must not
+    // grow without bound during long boss fights or dense endless waves.
+    const particleCap = this.quality >= 2 ? 300 : 520;
+    if (this.particles.length > particleCap) this.particles.splice(0, this.particles.length - particleCap);
+    const enemyShotCap = this.quality >= 2 ? 140 : 220;
+    if (this.ebullets.length > enemyShotCap) this.ebullets.splice(0, this.ebullets.length - enemyShotCap);
+    const playerShotCap = 260;
+    if (this.bullets.length > playerShotCap) this.bullets.splice(0, this.bullets.length - playerShotCap);
     this.governQuality(elapsed, performance.now() - t0, raw);
   }
 
@@ -3477,7 +3485,8 @@ export class Game {
         const want = 240;
         const dir = d > want + 50 ? 1 : d < want - 50 ? -1 : 0;
         const strafe = Math.sin(b.t * 0.7 + b.phase) * 0.8;
-        const spd = (58 + b.phase * 20) * (b.def.id === "queen" && b.telegraph > 0 ? 0 : b.telegraph > 0 ? 0.25 : 1) * (b.sweep || b.lashes.length ? 0.3 : 1);
+        const enrage = b.hp / b.maxHp <= 0.22 ? 1.16 : 1;
+        const spd = (58 + b.phase * 20) * enrage * (b.def.id === "queen" && b.telegraph > 0 ? 0 : b.telegraph > 0 ? 0.25 : 1) * (b.sweep || b.lashes.length ? 0.3 : 1);
         b.x += ((dx / d) * dir - (dy / d) * strafe) * spd * dt;
         b.y += ((dy / d) * dir + (dx / d) * strafe) * spd * dt;
       }
@@ -3504,7 +3513,7 @@ export class Game {
           const kind = list[b.attackIndex % list.length];
           b.attackIndex++;
           this.beginBossAttack(kind);
-          b.attackCd = Math.max(0.95, 1.7 - b.phase * 0.18) * (b.def.pace ?? 1);
+          b.attackCd = Math.max(0.82, 1.7 - b.phase * 0.18) * (b.def.pace ?? 1) * (b.hp / b.maxHp <= 0.22 ? 0.84 : 1);
         }
       }
 
