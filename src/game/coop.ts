@@ -107,7 +107,7 @@ export function snapshot(g: Game): CoopSnap {
       combo: g.combo, ult: g.ult, ammo: g.ammo, limitX: r1(g.limitX), pageCut: g.pageCut, frenzyOn: g.frenzyOn,
       bossHp: b ? b.hp / b.maxHp : -1, bossName: b?.def.name ?? "", bossPhase: b?.phase ?? 0, bossAttack: b?.attack ?? null,
       levelIndex: g.levelIndex, status: g.status, perks: g.perks, perkChoices: g.perkChoices, perkArm: r2(g.perkArm),
-      vote: g.vote, dark: r2(g.darkT), shake: r1(g.shake), zoom: r2(g.zoom), flash: r2(g.flash),
+      vote: g.vote, endless: g.endless, dark: r2(g.darkT), shake: r1(g.shake), zoom: r2(g.zoom), flash: r2(g.flash),
     },
   };
 }
