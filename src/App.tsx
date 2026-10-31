@@ -50,7 +50,7 @@ const initial: PublicState = {
   perkArm: 0,
   pageCut: false,
   finale: null,
-  coop: { on: false, role: "off", mateHere: false, p1Ready: false, p2Ready: false, levelIndex: 0, started: false },
+  coop: { on: false, role: "off", mateHere: false, p1Ready: false, p2Ready: false, levelIndex: 0, mode: "levels", started: false },
   mate: null,
   vote: null,
   endless: false,
@@ -336,6 +336,7 @@ export default function App() {
         net.send({
           t: "lobby",
           levelIndex: game.coop.levelIndex,
+          endless: game.coop.mode === "endless",
           p1Ready: game.coop.p1Ready,
           p2Ready: game.coop.p2Ready,
         });
@@ -345,7 +346,7 @@ export default function App() {
           setTimeout(() => {
             const gNow = gameRef.current;
             if (!gNow || gNow.coop.started || !gNow.coopCanStart()) return;
-            net.send({ t: "start" });
+            net.send({ t: "start", endless: gNow.coop.mode === "endless" });
             gNow.coopBegin();
           }, 420);
         }
@@ -355,7 +356,7 @@ export default function App() {
         // ---- host side ----
         case "hello":
           game.coopMateJoined(true);
-          net.send({ t: "welcome", levelIndex: game.coop.levelIndex });
+          net.send({ t: "welcome", levelIndex: game.coop.levelIndex, endless: game.coop.mode === "endless" });
           broadcastLobby();
           break;
         case "ready":
@@ -373,16 +374,19 @@ export default function App() {
         case "welcome":
           if (game.status !== "coop" && !game.coop.started) game.coopOpen("guest", Number(m.levelIndex) || 0);
           game.coopSetLevel(Number(m.levelIndex) || 0);
+          game.coopSetMode(m.endless ? "endless" : "levels");
           game.coopMateJoined(true);
           break;
         case "lobby":
           if (game.status !== "coop" && !game.coop.started) game.coopOpen("guest", Number(m.levelIndex) || 0);
           game.coopSetLevel(Number(m.levelIndex) || 0);
+          game.coopSetMode(m.endless ? "endless" : "levels");
           game.coopReady(1, !!m.p1Ready);
           game.coopReady(2, !!m.p2Ready);
           game.coopMateJoined(true);
           break;
         case "start":
+          if (typeof m.endless === "boolean") game.coopSetMode(m.endless ? "endless" : "levels");
           game.coop.started = true;
           game.mate.active = true;
           game.status = "playing";
@@ -470,13 +474,14 @@ export default function App() {
     };
   }, [joinCode]);
 
-  const startHost = async (levelIndex: number) => {
+  const startHost = async (levelIndex: number, endless = false) => {
     const game = gameRef.current;
     if (!game) return;
     setShowCoop(false);
     setJoinCode(null);
     clearInvite();
     game.coopOpen("host", levelIndex);
+    game.coopSetMode(endless ? "endless" : "levels");
     game.netSend = (msg) => net.send(msg as never);
     try {
       await net.host();
@@ -568,7 +573,7 @@ export default function App() {
                     setTimeout(() => {
                       const gNow = gameRef.current;
                       if (!gNow || gNow.coop.started || !gNow.coopCanStart()) return;
-                      net.send({ t: "start" });
+                      net.send({ t: "start", endless: gNow.coop.mode === "endless" });
                       gNow.coopBegin();
                     }, 420);
                   }
@@ -581,7 +586,7 @@ export default function App() {
                 const game = g();
                 if (!game) return;
                 goLandscape();
-                net.send({ t: "start" });
+                net.send({ t: "start", endless: game.coop.mode === "endless" });
                 game.coopBegin();
               }}
               onLeave={leaveCoop}
@@ -628,6 +633,7 @@ export default function App() {
             <CoopSetup
               s={state}
               onLevels={(i) => void startHost(i)}
+              onEndless={() => void startHost(0, true)}
               onJoin={(code) => startGuestJoin(code)}
               onClose={() => setShowCoop(false)}
             />
