@@ -246,7 +246,7 @@ app.whenReady().then(() => {
         mainWindow.webContents.send('updates:status', { stage: 'installing', version: info.version });
       }
       // NSIS updater waits for the app to exit, then silently installs and relaunches it.
-      setTimeout(() => autoUpdater.quitAndInstall(false, true), 1200);
+      setTimeout(() => autoUpdater.quitAndInstall(true, true), 1200);
     });
     autoUpdater.on('error', (error) => {
       if (mainWindow && !mainWindow.isDestroyed()) {
