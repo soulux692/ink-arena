@@ -9,6 +9,12 @@ let splashWindow;
 let normalBounds = null;
 let desktopTearActive = false;
 let updateCheckStarted = false;
+let updateCheckTimeout = null;
+
+function clearUpdateCheckTimeout() {
+  if (updateCheckTimeout) clearTimeout(updateCheckTimeout);
+  updateCheckTimeout = null;
+}
 
 registerLan(ipcMain, () => mainWindow, app);
 
@@ -73,9 +79,11 @@ function configureUpdater() {
     sendUpdateStatus({ stage: 'checking' });
   });
   autoUpdater.on('update-available', (info) => {
+    clearUpdateCheckTimeout();
     sendUpdateStatus({ stage: 'available', version: info.version });
   });
   autoUpdater.on('update-not-available', (info) => {
+    clearUpdateCheckTimeout();
     updateCheckStarted = false;
     sendUpdateStatus({ stage: 'not-available', version: info.version });
   });
@@ -93,6 +101,7 @@ function configureUpdater() {
     setTimeout(() => autoUpdater.quitAndInstall(true, true), 1100);
   });
   autoUpdater.on('error', (error) => {
+    clearUpdateCheckTimeout();
     updateCheckStarted = false;
     sendUpdateStatus({ stage: 'error', message: String(error?.message || error) });
   });
@@ -126,9 +135,18 @@ ipcMain.handle('updates:check', async () => {
   if (updateCheckStarted) return { status: 'checking' };
   updateCheckStarted = true;
   try {
-    await autoUpdater.checkForUpdates();
+    // electron-updater can remain pending when GitHub or the network does not respond.
+    // Bound the IPC call so the splash screen and in-game Update button never hang forever.
+    const timeoutPromise = new Promise((_, reject) => {
+      updateCheckTimeout = setTimeout(() => {
+        reject(new Error('GitHub Releases не ответил за 20 секунд. Проверь подключение к интернету и попробуй ещё раз.'));
+      }, 20000);
+    });
+    await Promise.race([autoUpdater.checkForUpdates(), timeoutPromise]);
+    clearUpdateCheckTimeout();
     return { status: 'checking' };
   } catch (error) {
+    clearUpdateCheckTimeout();
     updateCheckStarted = false;
     const message = String(error?.message || error);
     sendUpdateStatus({ stage: 'error', message });
