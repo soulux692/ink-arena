@@ -47,4 +47,4 @@ jobs:
             release/*.blockmap
             release/latest.yml
 
-# v1.3.3 adds a timeout to stalled GitHub Releases update checks.
+# v1.3.3 adds a timeout to stalled GitHub Releases update checks. [release-v1.3.3]
