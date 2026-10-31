@@ -76,6 +76,7 @@ function configureUpdater() {
     sendUpdateStatus({ stage: 'available', version: info.version });
   });
   autoUpdater.on('update-not-available', (info) => {
+    updateCheckStarted = false;
     sendUpdateStatus({ stage: 'not-available', version: info.version });
   });
   autoUpdater.on('download-progress', (progress) => {
@@ -92,6 +93,7 @@ function configureUpdater() {
     setTimeout(() => autoUpdater.quitAndInstall(true, true), 1100);
   });
   autoUpdater.on('error', (error) => {
+    updateCheckStarted = false;
     sendUpdateStatus({ stage: 'error', message: String(error?.message || error) });
   });
 }
