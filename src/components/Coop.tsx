@@ -35,6 +35,22 @@ export function CoopSetup({
   const endlessUnlocked = s.settings.freePlay || s.progress.filter((p) => p.cleared).length >= 3;
   const [inviteInput, setInviteInput] = useState("");
   const [joinErr, setJoinErr] = useState("");
+  const [lanRooms, setLanRooms] = useState<Array<{ code: string; host: string; version?: string }>>([]);
+
+  useEffect(() => {
+    const desktop = (window as any).inkDesktop;
+    if (!desktop?.getLanRooms) return;
+    let active = true;
+    const refresh = async () => {
+      try {
+        const rooms = await desktop.getLanRooms();
+        if (active) setLanRooms(Array.isArray(rooms) ? rooms : []);
+      } catch { /* desktop discovery is optional outside the installed app */ }
+    };
+    void refresh();
+    const timer = setInterval(() => void refresh(), 1200);
+    return () => { active = false; clearInterval(timer); };
+  }, []);
 
   const tryJoinFromText = (raw: string) => {
     const code = parseInviteCode(raw);
@@ -74,6 +90,31 @@ export function CoopSetup({
         <Btn size="sm" icon="close" onClick={onClose}>закрыть</Btn>
       </header>
       <Rule />
+
+      <div className="coinvite" style={{ marginBottom: "0.55em" }}>
+        <div className="coinvite-row">
+          <Cap>компьютеры в твоей Wi-Fi сети</Cap>
+          <Chip tone={lanRooms.length ? "solid" : "ghost"}>{lanRooms.length ? `найдено: ${lanRooms.length}` : "поиск…"}</Chip>
+        </div>
+        {lanRooms.length ? (
+          <div className="cosheets">
+            {lanRooms.map((room) => (
+              <button
+                type="button"
+                key={room.code}
+                className="cosheet"
+                onClick={() => onJoin(room.code)}
+                title={`Подключиться к ${room.host}`}
+              >
+                <b>↗</b>
+                <span>{room.host} · комната {room.code}</span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="hand cosetup-note">Открой Ink Arena на втором ПК и создай комнату. Убедись, что оба компьютера подключены к одной Wi-Fi сети.</p>
+        )}
+      </div>
 
       {/* Join friend block — works even if platform/iframe strips URL hash */}
       <div className="coinvite" style={{ marginBottom: "0.4em" }}>
