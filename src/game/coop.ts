@@ -43,6 +43,8 @@ const r1 = (v: number) => Math.round(v * 10) / 10;
 const r2 = (v: number) => Math.round(v * 100) / 100;
 
 type P = Game["player"];
+type PlayerTarget = { x: number; y: number };
+const playerTargets = new WeakMap<Game, { p1: PlayerTarget; p2: PlayerTarget }>();
 
 function packPlayer(p: P): PlayerWire {
   return [
@@ -53,8 +55,6 @@ function packPlayer(p: P): PlayerWire {
 }
 function applyPlayer(p: P, w: PlayerWire) {
   if (!w) return;
-  p.x = w[0];
-  p.y = w[1];
   p.angle = w[2];
   p.hp = w[3];
   p.maxHp = w[4];
@@ -69,6 +69,26 @@ function applyPlayer(p: P, w: PlayerWire) {
   p.weapon = WEAPONS[w[13]] ?? "pistol";
   p.active = !!w[14];
   p.shield = !!w[15];
+}
+
+/** Smooth remote player positions every rendered frame instead of snapping at 20 Hz. */
+export function smoothCoopPlayers(g: Game, raw: number) {
+  const targets = playerTargets.get(g);
+  if (!targets) return;
+  const alpha = 1 - Math.exp(-raw * 18);
+  for (const [player, target] of [[g.player, targets.p1], [g.mate, targets.p2]] as const) {
+    const dx = target.x - player.x;
+    const dy = target.y - player.y;
+    const distance = Math.hypot(dx, dy);
+    // Large jumps are intentional teleports/dashes; don't ease across the whole arena.
+    if (distance > 180) {
+      player.x = target.x;
+      player.y = target.y;
+    } else {
+      player.x += dx * alpha;
+      player.y += dy * alpha;
+    }
+  }
 }
 
 /** everything the guest needs for one rendered frame */
@@ -117,6 +137,10 @@ export function applySnapshot(g: Game, s: CoopSnap) {
   applyPlayer(g.player, s.p1);
   applyPlayer(g.mate, s.p2);
   g.mate.active = true;
+  const targets = playerTargets.get(g) ?? { p1: { x: s.p1[0], y: s.p1[1] }, p2: { x: s.p2[0], y: s.p2[1] } };
+  targets.p1 = { x: s.p1[0], y: s.p1[1] };
+  targets.p2 = { x: s.p2[0], y: s.p2[1] };
+  playerTargets.set(g, targets);
 
   const seen = new Map<number, Game["enemies"][number]>();
   for (const e of g.enemies) seen.set(e.id, e);
@@ -125,7 +149,6 @@ export function applySnapshot(g: Game, s: CoopSnap) {
     const e = prev ?? g.makeEnemy(KINDS[w[1]] as never, w[2], w[3]);
     e.id = w[0];
     e.kind = KINDS[w[1]] as never;
-    // smooth the 20 Hz stream into 60 fps motion
     if (prev) {
       e.x += (w[2] - e.x) * 0.5;
       e.y += (w[3] - e.y) * 0.5;
