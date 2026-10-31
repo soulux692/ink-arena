@@ -5,6 +5,7 @@ declare global {
       checkForUpdates?: () => Promise<{ status: string; message?: string }>;
       importUpdateArchive?: () => Promise<{ ok: boolean; canceled?: boolean; message?: string }>;
       onUpdateProgress?: (callback: (data: { stage: string; message: string }) => void) => void;
+      onUpdateStatus?: (callback: (data: { stage: string; version?: string; percent?: number; message?: string }) => void) => void;
     };
   }
 }
