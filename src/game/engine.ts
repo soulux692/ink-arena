@@ -2480,7 +2480,7 @@ export class Game {
     const w = this.wave;
     const entries = (Object.entries(lv.pool) as [EnemyKind, number][]).filter(([, n]) => n > 0);
     const sum = entries.reduce((a, [, n]) => a + n, 0) || 1;
-    const total = Math.max(4, lv.base + (w - 1) * lv.perWave - 2);
+    const total = Math.max(4, Math.round((lv.base + (w - 1) * lv.perWave - 2) * (this.isCoop() ? 1.35 : 1)));
     const q: EnemyKind[] = [];
     for (let i = 0; i < total; i++) {
       let roll = Math.random() * sum;
@@ -2586,7 +2586,7 @@ export class Game {
     const scale = this.endless
       ? 1 + Math.floor(this.wave / 4) * 0.3
       : 1 + this.levelIndex * 0.1;
-    const hp = Math.round(def.hp * scale);
+    const hp = Math.round(def.hp * scale * (this.isCoop() ? 1.5 : 1));
     this.boss = this.makeBoss(def, hp);
     this.initTentacles();
     this.bossBanner = 3;
@@ -3614,7 +3614,7 @@ export class Game {
       if (this.waveCooldown <= 0) this.startWave();
     } else if (this.spawnQueue.length > 0) {
       this.spawnTimer -= dt;
-      const cap = (this.frenzyOn ? 44 : 34) + this.difficulty * 3;
+      const cap = (this.frenzyOn ? 44 : 34) + this.difficulty * 3 + (this.isCoop() ? 10 : 0);
       if (this.spawnTimer <= 0 && this.enemies.length < cap) {
         const kind = this.spawnQueue.shift()!;
         this.spawnEnemy(kind);
