@@ -1,3 +1,10 @@
+## 1.3.2
+
+- Startup now waits for the update check and clearly reports when the installed version is current.
+- Available updates show the detected version and real download progress before automatic installation and restart.
+- Main-menu UPDATE button now checks GitHub Releases instead of opening the disabled ZIP import flow.
+- Co-op player movement is interpolated every rendered frame to reduce visible stutter.
+
 # Changelog
 
 ## 1.3.1
