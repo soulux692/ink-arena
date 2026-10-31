@@ -46,7 +46,7 @@ module.exports = function registerLan(ipcMain, getWindow, app) {
         if (msg && typeof msg === 'object') emit({ kind: 'message', data: msg });
       }
     });
-    sock.on('connect', () => { if (!isHost) emit({ kind: 'connected' }); });
+    if (!isHost) emit({ kind: 'connected' });
     sock.on('close', () => {
       if (socket === sock) socket = null;
       emit({ kind: 'closed' });
