@@ -45,3 +45,5 @@ jobs:
             release/*.exe
             release/*.blockmap
             release/latest.yml
+
+# v1.2.0 includes the two-player cooperative Endless Sheet update.
