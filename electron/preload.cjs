@@ -1,4 +1,5 @@
 const { contextBridge, ipcRenderer } = require('electron');
+
 contextBridge.exposeInMainWorld('inkDesktop', {
   getPcProfile: () => ipcRenderer.invoke('startup:profile'),
   launch: () => ipcRenderer.invoke('startup:launch'),
