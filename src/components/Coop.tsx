@@ -3,7 +3,7 @@ import type { PublicState } from "../game/engine";
 import { LEVELS, BOSSES, ENDLESS } from "../game/levels";
 import { parseInviteCode, type LinkState, type Role, type Via } from "../net/net";
 import { BossDoodle, PencilPal } from "./Doodles";
-import { Btn, Cap, Card, Chip, Disp, Icon, Rule, Stamp, ix } from "./ui";
+import { Btn, Cap, Card, Chip, Disp, Icon, Rule, ix } from "./ui";
 
 export interface NetView {
   role: Role;
