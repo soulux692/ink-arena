@@ -568,7 +568,7 @@ export default function App() {
                 if (!game) return;
                 if (game.netRole === "host") {
                   game.coopReady(1, v);
-                  net.send({ t: "lobby", levelIndex: game.coop.levelIndex, p1Ready: game.coop.p1Ready, p2Ready: game.coop.p2Ready });
+                  net.send({ t: "lobby", levelIndex: game.coop.levelIndex, endless: game.coop.mode === "endless", p1Ready: game.coop.p1Ready, p2Ready: game.coop.p2Ready });
                   if (game.coopCanStart() && !game.coop.started) {
                     setTimeout(() => {
                       const gNow = gameRef.current;
@@ -596,7 +596,7 @@ export default function App() {
                 game.coopSetLevel(i);
                 game.coopReady(1, false);
                 game.coopReady(2, false);
-                net.send({ t: "lobby", levelIndex: i, p1Ready: false, p2Ready: false });
+                net.send({ t: "lobby", levelIndex: i, endless: false, p1Ready: false, p2Ready: false });
               }}
             />
           )}
