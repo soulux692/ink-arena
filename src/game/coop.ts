@@ -1,6 +1,7 @@
 // Co-op wire format. The host runs the whole simulation and ships a compact snapshot;
 // the guest only renders it and streams its own input back.
 import type { Game } from "./engine";
+import { ENDLESS, LEVELS } from "./levels";
 import type { WeaponId } from "./levels";
 
 export interface RemoteInput {
@@ -233,6 +234,8 @@ export function applySnapshot(g: Game, s: CoopSnap) {
   g.pageCut = h.pageCut as unknown as boolean;
   g.frenzyOn = h.frenzyOn as unknown as boolean;
   g.levelIndex = h.levelIndex as unknown as number;
+  g.endless = !!h.endless;
+  g.level = g.endless ? ENDLESS : LEVELS[g.levelIndex] ?? LEVELS[0];
   g.perks = h.perks as never;
   g.perkChoices = h.perkChoices as never;
   g.perkArm = h.perkArm as unknown as number;
