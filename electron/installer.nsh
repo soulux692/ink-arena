@@ -1,5 +1,5 @@
 !macro preInit
   ; Keep application files out of the Desktop by default.
-  ; Users can still choose another installation folder in Setup.
+  ; Installation uses the standard one-click application folder.
   SetRegView 64
 !macroend
