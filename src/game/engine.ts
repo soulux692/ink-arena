@@ -2182,14 +2182,9 @@ export class Game {
     this.last = now;
     const t0 = performance.now();
     this.step(raw);
-    // Hard safety budgets: transient objects are cosmetic/projectile-only and must not
-    // grow without bound during long boss fights or dense endless waves.
-    const particleCap = this.quality >= 2 ? 300 : 520;
-    if (this.particles.length > particleCap) this.particles.splice(0, this.particles.length - particleCap);
-    const enemyShotCap = this.quality >= 2 ? 140 : 220;
-    if (this.ebullets.length > enemyShotCap) this.ebullets.splice(0, this.ebullets.length - enemyShotCap);
-    const playerShotCap = 260;
-    if (this.bullets.length > playerShotCap) this.bullets.splice(0, this.bullets.length - playerShotCap);
+    // Cosmetic-only safety budgets for long endless runs; combat objects are untouched.
+    if (this.ghosts.length > 60) this.ghosts.splice(0, this.ghosts.length - 60);
+    if (this.cracks.length > 120) this.cracks.splice(0, this.cracks.length - 120);
     this.governQuality(elapsed, performance.now() - t0, raw);
   }
 
@@ -3407,7 +3402,8 @@ export class Game {
         const d = Math.random() * b.r * 1.5;
         const ex = b.x + Math.cos(a) * d;
         const ey = b.y + Math.sin(a) * d;
-        for (let i = 0; i < 16; i++) this.drop(ex, ey, 130 + Math.random() * 380);
+        const deathBurst = [16, 10, 6][this.quality] ?? 10;
+        for (let i = 0; i < deathBurst; i++) this.drop(ex, ey, 130 + Math.random() * 380);
         this.stains.push({ x: ex, y: ey, size: 8 + Math.random() * 16, seed: Math.random() * 1e6 , born: this.time });
         this.shock(ex, ey, 8, 420, 0.4);
         this.shake = Math.max(this.shake, 14);
