@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { PublicState } from "../game/engine";
-import { LEVELS, BOSSES } from "../game/levels";
+import { LEVELS, BOSSES, ENDLESS } from "../game/levels";
 import { parseInviteCode, type LinkState, type Role, type Via } from "../net/net";
 import { BossDoodle, PencilPal } from "./Doodles";
 import { Btn, Cap, Card, Chip, Disp, Icon, Rule, Stamp, ix } from "./ui";
@@ -20,16 +20,19 @@ export interface NetView {
 export function CoopSetup({
   s,
   onLevels,
+  onEndless,
   onJoin,
   onClose,
 }: {
   s: PublicState;
   onLevels: (index: number) => void;
+  onEndless: () => void;
   onJoin: (code: string) => void;
   onClose: () => void;
 }) {
   const open = (i: number) => s.settings.freePlay || i === 0 || s.progress[i - 1]?.cleared;
   const [sheet, setSheet] = useState(0);
+  const endlessUnlocked = s.settings.freePlay || s.progress.filter((p) => p.cleared).length >= 3;
   const [inviteInput, setInviteInput] = useState("");
   const [joinErr, setJoinErr] = useState("");
 
@@ -113,12 +116,12 @@ export function CoopSetup({
           <span className="hand">проходим кампанию вдвоём, лист за листом</span>
           <Chip tone="solid">онлайн · до 2 игроков</Chip>
         </button>
-        <div className="comode comode-off rise" style={ix(2)}>
+        <button type="button" className={`comode rise ${!endlessUnlocked ? "comode-off" : ""}`} style={ix(2)} onClick={onEndless} disabled={!endlessUnlocked}>
           <span className="comode-ic"><Icon name="inf" /></span>
           <b>Бесконечный лист</b>
-          <span className="hand">волны без конца и общий рекорд на двоих</span>
-          <Stamp rot={-6}>в разработке</Stamp>
-        </div>
+          <span className="hand">совместные бесконечные волны, боссы каждые 4 волны и общий рекорд</span>
+          <Chip tone="solid">{endlessUnlocked ? "∞ · кооператив онлайн" : "откроется после 3 уровней"}</Chip>
+        </button>
       </div>
 
       <Cap className="cosetup-cap">стартовый лист</Cap>
@@ -187,7 +190,8 @@ export function CoopLobby({
   const mate = host ? s.coop.p2Ready : s.coop.p1Ready;
   const [copied, setCopied] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
-  const lv = LEVELS[s.coop.levelIndex] ?? LEVELS[0];
+  const endless = s.coop.mode === "endless";
+  const lv = endless ? ENDLESS : LEVELS[s.coop.levelIndex] ?? LEVELS[0];
 
   useEffect(() => {
     if (!copied) return;
@@ -257,12 +261,12 @@ export function CoopLobby({
           <div className="colevel-top">
             <BossDoodle id={lv.boss} className="colevel-boss" />
             <div>
-              <Cap>старт с листа {s.coop.levelIndex + 1}</Cap>
+              <Cap>{endless ? "режим · бесконечный лист" : `старт с листа ${s.coop.levelIndex + 1}`}</Cap>
               <b className="disp colevel-name">{lv.name}</b>
-              <span className="hand">☠ {BOSSES[lv.boss].name} · {lv.waves} волн</span>
+              <span className="hand">☠ {BOSSES[lv.boss].name} · {endless ? "боссы каждые 4 волны" : `${lv.waves} волн`}</span>
             </div>
           </div>
-          {host ? (
+          {host && !endless ? (
             <div className="colevel-pick">
               {LEVELS.map((l, i) => (
                 <button
@@ -277,7 +281,7 @@ export function CoopLobby({
               ))}
             </div>
           ) : (
-            <p className="hand colevel-note">лист выбирает хост</p>
+            <p className="hand colevel-note">{endless ? "Волны не заканчиваются. Сколько продержитесь вместе?" : "лист выбирает хост"}</p>
           )}
         </Card>
       </div>
