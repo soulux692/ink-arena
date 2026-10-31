@@ -147,7 +147,7 @@ export function clearInvite() {
 // transport seams (tests inject fakes; production uses browser APIs)
 // ---------------------------------------------------------------------------
 
-type LinkName = "peer" | "rtc" | "bc";
+type LinkName = "peer" | "rtc" | "bc" | "lan";
 
 export interface ConnLike {
   readonly open: boolean;
@@ -285,6 +285,8 @@ export class Net {
   private startStamp = 0;
   private lastRx = 0;
   private settle: { resolve: () => void; reject: (e: unknown) => void } | null = null;
+  private lanConnected = false;
+  private lanReady = false;
 
   constructor(deps: NetDeps = {}) {
     this.deps = {
@@ -306,6 +308,19 @@ export class Net {
           : (name: string) =>
               typeof BroadcastChannel !== "undefined" ? (new BroadcastChannel(name) as unknown as BcLike) : null,
     };
+    const desktop = typeof window !== "undefined" ? (window as any).inkDesktop : null;
+    desktop?.onLanEvent?.((event: any) => {
+      if (!event || typeof event !== "object") return;
+      if (event.kind === "connected") {
+        this.lanConnected = true;
+        this.claimWin("lan");
+      } else if (event.kind === "message" && this.lanConnected) {
+        this.handleIncoming(event.data);
+      } else if (event.kind === "closed" || event.kind === "error") {
+        this.lanConnected = false;
+        if (this.winner === "lan") this.linkDown();
+      }
+    });
   }
 
   onMessage(fn: Listener) {
@@ -334,7 +349,7 @@ export class Net {
   }
 
   get connected() {
-    return this.state === "live" && (!!this.conn?.open || this.dcOpen || this.bcLive);
+    return this.state === "live" && (!!this.conn?.open || this.dcOpen || this.bcLive || this.lanConnected);
   }
 
   // ------------------------------------------------------------------ host
@@ -359,6 +374,7 @@ export class Net {
           if (this.alive(tk)) reject(e);
         },
       };
+      void this.startLanHost(tk);
       this.deadlineTimer = setTimeout(() => {
         if (!this.alive(tk) || !this.settle) return;
         this.settle = null;
@@ -404,6 +420,7 @@ export class Net {
           if (this.alive(tk)) reject(e);
         },
       };
+      void this.tryLanJoin(tk);
       this.deadlineTimer = setTimeout(() => {
         if (!this.alive(tk) || !this.settle) return;
         this.settle = null;
@@ -438,6 +455,39 @@ export class Net {
         }
       }, 9000);
     });
+  }
+
+  // ------------------------------------------------------------------ Native desktop LAN transport
+
+  private async startLanHost(tk: number) {
+    const desktop = typeof window !== "undefined" ? (window as any).inkDesktop : null;
+    if (!desktop?.hostLan) return;
+    try {
+      const result = await desktop.hostLan(this.code);
+      if (!this.alive(tk)) return;
+      if (result?.ok) {
+        this.lanReady = true;
+        this.maybeHostReady();
+      } else if (result?.message) {
+        this.setNote("Локальная сеть недоступна: " + result.message);
+      }
+    } catch {
+      if (this.alive(tk)) this.setNote("Не удалось открыть комнату в локальной сети.");
+    }
+  }
+
+  private async tryLanJoin(tk: number) {
+    const desktop = typeof window !== "undefined" ? (window as any).inkDesktop : null;
+    if (!desktop?.joinLan) return;
+    try {
+      const result = await desktop.joinLan(this.code);
+      if (!this.alive(tk) || this.winner) return;
+      if (result?.ok) {
+        this.setNote("Найден компьютер в локальной сети, подключаемся…");
+      }
+    } catch {
+      // If LAN discovery fails, the existing PeerJS/WebRTC routes continue.
+    }
   }
 
   // ------------------------------------------------------------------ PeerJS link
@@ -877,7 +927,7 @@ export class Net {
   private claimWin(name: LinkName) {
     if (this.winner) return;
     this.winner = name;
-    this.via = name === "bc" ? "local" : "p2p";
+    this.via = name === "bc" || name === "lan" ? "local" : "p2p";
     this.ntfyStop();
     this.setNote("");
     this.setState("live");
@@ -894,7 +944,7 @@ export class Net {
 
   private linkDown() {
     if (!this.winner) return;
-    if (this.conn?.open || this.dcOpen || this.bcLive) return;
+    if (this.conn?.open || this.dcOpen || this.bcLive || this.lanConnected) return;
     this.winner = null;
     this.via = "";
     this.stopPing();
@@ -971,6 +1021,10 @@ export class Net {
 
   /** exactly one link carries traffic (peer > rtc > bc), so frames never duplicate */
   send(msg: HostMsg | GuestMsg) {
+    if (this.lanConnected) {
+      const desktop = typeof window !== "undefined" ? (window as any).inkDesktop : null;
+      try { desktop?.sendLan?.(msg); return; } catch { /* try fallback */ }
+    }
     if (this.conn?.open) {
       try {
         this.conn.send(msg);
@@ -1054,6 +1108,10 @@ export class Net {
     this.takenRetries = 0;
     this.lastAnswer = null;
     this.ping = 0;
+    this.lanConnected = false;
+    this.lanReady = false;
+    const desktop = typeof window !== "undefined" ? (window as any).inkDesktop : null;
+    try { void desktop?.leaveLan?.(); } catch { /* ignore */ }
   }
 
   private bindPeerConn(conn: ConnLike, tk: number) {
@@ -1083,7 +1141,7 @@ export class Net {
 
   private maybeHostReady() {
     if (this.role !== "host" || this.state !== "opening") return;
-    if (!this.peerOpened && !this.ntfyOk) return;
+    if (!this.peerOpened && !this.ntfyOk && !this.lanReady) return;
     this.setNote("");
     this.setState("waiting");
     if (this.settle) {

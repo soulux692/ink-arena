@@ -5,6 +5,7 @@ name: Build and Release Ink Arena Remastered
   push:
     branches:
       - main
+      - 'feature/**'
     tags:
       - "v*"
   workflow_dispatch:
@@ -32,11 +33,11 @@ jobs:
         run: npm run build && npx electron-builder --win nsis --publish never
 
       - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v') || (github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[release-v1.2.0]'))
+        if: startsWith(github.ref, 'refs/tags/v') || (github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[release-v1.3.0]'))
         uses: softprops/action-gh-release@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v1.2.0' }}
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v1.3.0' }}
           name: Ink Arena Remastered ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v1.2.0' }}
           generate_release_notes: true
           draft: false
@@ -46,4 +47,4 @@ jobs:
             release/*.blockmap
             release/latest.yml
 
-# v1.2.0 includes the two-player cooperative Endless Sheet update.
+# v1.3.0 includes the two-player cooperative Endless Sheet update.

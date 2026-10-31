@@ -5,11 +5,14 @@ const { dialog } = require('electron');
 const fs = require('fs');
 const os = require('os');
 const { spawn } = require('child_process');
+const registerLan = require('./lan.cjs');
 
 let mainWindow;
 let splashWindow;
 let normalBounds = null;
 let desktopTearActive = false;
+
+registerLan(ipcMain, () => mainWindow, app);
 
 function getPcProfile() {
   const totalRamGB = Math.round(os.totalmem() / (1024 ** 3));
@@ -222,30 +225,33 @@ app.whenReady().then(() => {
   // Update checks are enabled for packaged builds once a publish provider is
   // configured in package.json (GitHub Releases or another electron-builder provider).
   if (app.isPackaged) {
-    autoUpdater.autoDownload = false;
-    autoUpdater.on('update-available', async (info) => {
-      const answer = await dialog.showMessageBox({
-        type: 'info',
-        buttons: ['Скачать обновление', 'Позже'],
-        defaultId: 0,
-        cancelId: 1,
-        title: 'Доступно обновление',
-        message: `Доступна новая версия Ink Arena Remastered: ${info.version}`,
-        detail: 'Игра загрузит обновление и предложит перезапуститься для установки.'
-      });
-      if (answer.response === 0) autoUpdater.downloadUpdate().catch(() => {});
+    // Download updates from GitHub Releases automatically and install on restart.
+    autoUpdater.autoDownload = true;
+    autoUpdater.autoInstallOnAppQuit = true;
+    autoUpdater.allowPrerelease = false;
+    autoUpdater.on('update-available', (info) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('updates:status', { stage: 'available', version: info.version });
+      }
     });
-    autoUpdater.on('update-downloaded', async () => {
-      const answer = await dialog.showMessageBox({
-        type: 'info',
-        buttons: ['Перезапустить и установить', 'Позже'],
-        defaultId: 0,
-        cancelId: 1,
-        title: 'Обновление готово',
-        message: 'Обновление скачано.',
-        detail: 'Сохраните прогресс, если нужно, и перезапустите игру для установки.'
-      });
-      if (answer.response === 0) autoUpdater.quitAndInstall();
+    autoUpdater.on('download-progress', (progress) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('updates:status', {
+          stage: 'downloading', percent: Math.round(progress.percent || 0)
+        });
+      }
+    });
+    autoUpdater.on('update-downloaded', (info) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('updates:status', { stage: 'installing', version: info.version });
+      }
+      // NSIS updater waits for the app to exit, then silently installs and relaunches it.
+      setTimeout(() => autoUpdater.quitAndInstall(true, true), 1200);
+    });
+    autoUpdater.on('error', (error) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('updates:status', { stage: 'error', message: String(error?.message || error) });
+      }
     });
     autoUpdater.checkForUpdates().catch(() => {});
   }
