@@ -1,7 +1,6 @@
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
 const { autoUpdater } = require('electron-updater');
-const { dialog } = require('electron');
 const os = require('os');
 const registerLan = require('./lan.cjs');
 
@@ -9,13 +8,13 @@ let mainWindow;
 let splashWindow;
 let normalBounds = null;
 let desktopTearActive = false;
+let updateCheckStarted = false;
 
 registerLan(ipcMain, () => mainWindow, app);
 
 function getPcProfile() {
   const totalRamGB = Math.round(os.totalmem() / (1024 ** 3));
   const cpuThreads = os.cpus()?.length || 2;
-  // These are a lightweight capability estimate, not a benchmark.
   const tier = (totalRamGB >= 16 && cpuThreads >= 8) ? 'high'
     : (totalRamGB >= 8 && cpuThreads >= 4) ? 'medium' : 'low';
   return {
@@ -32,6 +31,12 @@ function getPcProfile() {
   };
 }
 
+function sendUpdateStatus(payload) {
+  for (const win of [splashWindow, mainWindow]) {
+    if (win && !win.isDestroyed()) win.webContents.send('updates:status', payload);
+  }
+}
+
 function createSplash() {
   splashWindow = new BrowserWindow({
     width: 720, height: 440, frame: false, resizable: false,
@@ -43,6 +48,10 @@ function createSplash() {
 }
 
 function createGame() {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.focus();
+    return;
+  }
   mainWindow = new BrowserWindow({
     width: 1280, height: 800, minWidth: 900, minHeight: 600,
     show: false, backgroundColor: '#111111',
@@ -55,6 +64,38 @@ function createGame() {
   });
 }
 
+function configureUpdater() {
+  if (!app.isPackaged) return;
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = false;
+  autoUpdater.allowPrerelease = false;
+  autoUpdater.on('checking-for-update', () => {
+    sendUpdateStatus({ stage: 'checking' });
+  });
+  autoUpdater.on('update-available', (info) => {
+    sendUpdateStatus({ stage: 'available', version: info.version });
+  });
+  autoUpdater.on('update-not-available', (info) => {
+    sendUpdateStatus({ stage: 'not-available', version: info.version });
+  });
+  autoUpdater.on('download-progress', (progress) => {
+    sendUpdateStatus({
+      stage: 'downloading',
+      percent: Math.max(0, Math.min(100, Math.round(progress.percent || 0))),
+      transferred: progress.transferred,
+      total: progress.total
+    });
+  });
+  autoUpdater.on('update-downloaded', (info) => {
+    sendUpdateStatus({ stage: 'installing', version: info.version, percent: 100 });
+    // The downloaded installer is applied only after the updater confirms completion.
+    setTimeout(() => autoUpdater.quitAndInstall(true, true), 1100);
+  });
+  autoUpdater.on('error', (error) => {
+    sendUpdateStatus({ stage: 'error', message: String(error?.message || error) });
+  });
+}
+
 ipcMain.handle('window:desktop-tear', (_event, active) => {
   if (!mainWindow || mainWindow.isDestroyed()) return false;
   const { screen } = require('electron');
@@ -62,8 +103,6 @@ ipcMain.handle('window:desktop-tear', (_event, active) => {
     normalBounds = mainWindow.getBounds();
     const display = screen.getDisplayMatching(normalBounds);
     const area = display.workArea;
-    // Keep the game rendering at its normal 16:10 size while the native window
-    // exposes the right half of the desktop beside it.
     const visibleWidth = Math.max(520, Math.floor(normalBounds.width / 2));
     mainWindow.setBounds({
       x: area.x,
@@ -82,17 +121,20 @@ ipcMain.handle('window:desktop-tear', (_event, active) => {
 
 ipcMain.handle('updates:check', async () => {
   if (!app.isPackaged) return { status: 'dev' };
+  if (updateCheckStarted) return { status: 'checking' };
+  updateCheckStarted = true;
   try {
-    const result = await autoUpdater.checkForUpdates();
-    return { status: result ? 'checked' : 'no-update' };
+    await autoUpdater.checkForUpdates();
+    return { status: 'checking' };
   } catch (error) {
-    return { status: 'unavailable', message: String(error?.message || error) };
+    updateCheckStarted = false;
+    const message = String(error?.message || error);
+    sendUpdateStatus({ stage: 'error', message });
+    return { status: 'unavailable', message };
   }
 });
 
-
-// Importing ZIP archives and executing bundled BAT/PowerShell scripts is intentionally
-// disabled. Updates must come from the signed/reviewed GitHub release channel.
+// Importing ZIP archives and executing bundled BAT/PowerShell scripts remains disabled.
 ipcMain.handle('updates:import-archive', async () => ({
   ok: false,
   message: 'Импорт ZIP-архивов отключён в целях безопасности. Используйте обновление через GitHub Releases.'
@@ -108,39 +150,7 @@ ipcMain.handle('app:open-external', (_event, url) => {
 });
 
 app.whenReady().then(() => {
-  // Update checks are enabled for packaged builds once a publish provider is
-  // configured in package.json (GitHub Releases or another electron-builder provider).
-  if (app.isPackaged) {
-    // Download updates from GitHub Releases automatically and install on restart.
-    autoUpdater.autoDownload = true;
-    autoUpdater.autoInstallOnAppQuit = true;
-    autoUpdater.allowPrerelease = false;
-    autoUpdater.on('update-available', (info) => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('updates:status', { stage: 'available', version: info.version });
-      }
-    });
-    autoUpdater.on('download-progress', (progress) => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('updates:status', {
-          stage: 'downloading', percent: Math.round(progress.percent || 0)
-        });
-      }
-    });
-    autoUpdater.on('update-downloaded', (info) => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('updates:status', { stage: 'installing', version: info.version });
-      }
-      // NSIS updater waits for the app to exit, then silently installs and relaunches it.
-      setTimeout(() => autoUpdater.quitAndInstall(true, true), 1200);
-    });
-    autoUpdater.on('error', (error) => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('updates:status', { stage: 'error', message: String(error?.message || error) });
-      }
-    });
-    autoUpdater.checkForUpdates().catch(() => {});
-  }
+  configureUpdater();
   createSplash();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createSplash();
