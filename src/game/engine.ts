@@ -15,7 +15,7 @@ import {
   setLod,
 } from "./sketch";
 import { drawEyeBoss, drawBombBoss } from "./models";
-import { snapshot, applySnapshot, playFx, type CoopSnap, type RemoteInput } from "./coop";
+import { snapshot, applySnapshot, smoothCoopPlayers, playFx, type CoopSnap, type RemoteInput } from "./coop";
 import {
   startFinale,
   updateFinale,
@@ -1479,6 +1479,7 @@ export class Game {
       applySnapshot(this, this.pendingSnap);
       this.pendingSnap = null;
     }
+    smoothCoopPlayers(this, raw);
     this.dilation += ((this.status === "perks" ? 0.2 : 1) - this.dilation) * Math.min(1, raw * 3.4);
     this.darkT += ((this.status === "perks" ? 1 : 0) - this.darkT) * Math.min(1, raw * 3.4);
     if (this.perkArm > 0) this.perkArm = Math.max(0, this.perkArm - raw);

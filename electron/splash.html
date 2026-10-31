@@ -7,36 +7,88 @@
 *{box-sizing:border-box}body{margin:0;background:#111;color:#f3f0e8;font:16px "Segoe UI",sans-serif;overflow:hidden}
 main{padding:34px 42px;height:100vh;display:flex;flex-direction:column;justify-content:space-between;background:radial-gradient(ellipse at 80% 10%,#343434 0,#171717 45%,#101010 100%)}
 .logo{font-size:28px;font-weight:900;letter-spacing:2px}.logo span{color:#aaa}.tag{color:#aaa;margin-top:6px}
-h1{font-size:24px;margin:0 0 10px}.status{color:#c9c9c9;min-height:24px}.bar{height:9px;background:#353535;border-radius:8px;overflow:hidden;margin:18px 0 10px}.fill{height:100%;width:0;background:#f2f0e9;transition:width .35s}
-.meta{display:flex;justify-content:space-between;color:#929292;font-size:12px}.bottom{display:flex;justify-content:space-between;align-items:end;gap:20px}.hint{font-size:12px;color:#888;max-width:410px}.skip{border:1px solid #666;background:transparent;color:#eee;padding:10px 15px;cursor:pointer}
+h1{font-size:24px;margin:0 0 10px}.status{color:#c9c9c9;min-height:24px}.bar{height:9px;background:#353535;border-radius:8px;overflow:hidden;margin:18px 0 10px}.fill{height:100%;width:0;background:#f2f0e9;transition:width .25s}
+.meta{display:flex;justify-content:space-between;color:#929292;font-size:12px}.bottom{display:flex;justify-content:space-between;align-items:end;gap:20px}.hint{font-size:12px;color:#888;max-width:440px}.skip{border:1px solid #777;background:transparent;color:#eee;padding:10px 15px;cursor:pointer}.skip:hover{background:#333}
 </style></head>
 <body><main>
 <header><div class="logo">INK ARENA <span>REMASTERED</span></div><div class="tag">Рисованный хаос начинается здесь</div></header>
-<section><h1>Подготовка игры</h1><div class="status" id="status">Инициализация...</div><div class="bar"><div class="fill" id="fill"></div></div><div class="meta"><span id="detail">Проверяем конфигурацию компьютера</span><span id="percent">0%</span></div></section>
-<footer class="bottom"><div class="hint" id="hint">Проводится лёгкая проверка оборудования и выбор рекомендуемого профиля. Это не стресс-тест.</div><button class="skip" id="launch" hidden>Запустить игру</button></footer>
+<section><h1 id="title">Подготовка игры</h1><div class="status" id="status">Инициализация...</div><div class="bar"><div class="fill" id="fill"></div></div><div class="meta"><span id="detail">Проверяем конфигурацию компьютера</span><span id="percent">0%</span></div></section>
+<footer class="bottom"><div class="hint" id="hint">Сначала проверим наличие обновлений. Если новая версия найдётся, она установится до запуска игры.</div><button class="skip" id="launch" hidden>Продолжить без обновления</button></footer>
 </main>
 <script>
 const $=id=>document.getElementById(id);
-const steps=[
- [12,'Проверяем компьютер','Читаем доступные сведения об оперативной памяти и процессоре...'],
- [32,'Подбираем настройки','Выбираем предварительный графический профиль...'],
- [55,'Готовим игровые ресурсы','Подготавливаем окно и локальные файлы игры...'],
- [78,'Завершаем подготовку','Почти готово...'],
- [94,'Запускаем арену','Открываем игру в отдельном окне...']
-];
+let launched=false, checkFinished=false, updateFound=false, fallbackTimer=null;
+const setProgress=(p,status,detail)=>{
+  $('fill').style.width=Math.max(0,Math.min(100,p))+'%';
+  $('percent').textContent=Math.round(p)+'%';
+  if(status)$('status').textContent=status;
+  if(detail)$('detail').textContent=detail;
+};
+const launch=async()=>{
+  if(launched)return;
+  launched=true;
+  $('launch').hidden=true;
+  setProgress(100,'Запускаем Ink Arena','Открываем главное меню...');
+  await window.inkDesktop.launch();
+};
+const showError=(message)=>{
+  clearTimeout(fallbackTimer);
+  $('title').textContent='Проверка обновлений';
+  setProgress(82,'Не удалось проверить обновления',message||'Проверь подключение к интернету.');
+  $('hint').textContent='Можно продолжить без обновления. Проверку можно повторить при следующем запуске.';
+  $('launch').hidden=false;
+};
+window.inkDesktop.onUpdateStatus((data)=>{
+  if(!data||launched)return;
+  clearTimeout(fallbackTimer);
+  if(data.stage==='checking'){
+    $('title').textContent='Проверка обновлений';
+    setProgress(68,'Проверяем новую версию','Связываемся с сервером обновлений...');
+  }else if(data.stage==='not-available'){
+    checkFinished=true;
+    $('title').textContent='Обновления';
+    setProgress(100,'У тебя последняя версия','Новых обновлений пока нет.');
+    $('hint').textContent='Версия актуальна. Сейчас откроется главное меню.';
+    setTimeout(launch,1200);
+  }else if(data.stage==='available'){
+    updateFound=true;
+    $('title').textContent='Доступно обновление '+data.version;
+    setProgress(5,'Найдена новая версия '+data.version,'Загружаем обновление. Не закрывай игру...');
+    $('hint').textContent='Сначала загрузим и проверим файлы обновления, затем установщик перезапустит игру.';
+  }else if(data.stage==='downloading'){
+    updateFound=true;
+    $('title').textContent='Загрузка обновления';
+    setProgress(data.percent||0,'Устанавливаем обновление', 'Загружено '+(data.percent||0)+'%');
+    $('hint').textContent='Пожалуйста, подожди. Игра запустится автоматически после установки.';
+  }else if(data.stage==='installing'){
+    updateFound=true;
+    setProgress(100,'Обновление загружено','Перезапускаем Ink Arena...');
+    $('hint').textContent='Не выключай компьютер во время установки.';
+  }else if(data.stage==='error'){
+    showError(data.message);
+  }
+});
 (async()=>{
- let profile={tier:'unknown',totalRamGB:0,cpuThreads:0};
- try{profile=await window.inkDesktop.getPcProfile()}catch(e){}
- const start=Date.now();
- for(let i=0;i<steps.length;i++){
-  const [p,title,detail]=steps[i];
-  $('status').textContent=title;$('detail').textContent=detail;$('fill').style.width=p+'%';$('percent').textContent=p+'%';
-  await new Promise(r=>setTimeout(r,650));
- }
- $('hint').textContent=`Профиль: ${profile.tier||'стандартный'} · RAM: ${profile.totalRamGB||'?'} ГБ · логических потоков CPU: ${profile.cpuThreads||'?'}. Настройки являются рекомендацией; тонкая настройка зависит от возможностей самой игры.`;
- $('status').textContent='Готово!';$('detail').textContent='Можно играть';$('fill').style.width='100%';$('percent').textContent='100%';
- await new Promise(r=>setTimeout(r,500));
- await window.inkDesktop.launch();
-})().catch(e=>{$('status').textContent='Не удалось запустить игру';$('detail').textContent='Попробуйте переустановить приложение';$('launch').hidden=false;});
-$('launch').addEventListener('click',()=>window.inkDesktop.launch());
+  try{
+    setProgress(18,'Проверяем компьютер','Читаем сведения о процессоре и оперативной памяти...');
+    const profile=await window.inkDesktop.getPcProfile();
+    $('hint').textContent='Профиль компьютера: '+(profile.tier||'стандартный')+' · RAM '+(profile.totalRamGB||'?')+' ГБ · CPU '+(profile.cpuThreads||'?')+' потоков.';
+    setProgress(48,'Подготавливаем игру','Проверяем файлы и настройки...');
+    const result=await window.inkDesktop.checkForUpdates();
+    if(result.status==='dev'){
+      setProgress(100,'Режим разработки','Автоматические обновления доступны только в установленной версии.');
+      setTimeout(launch,700);
+      return;
+    }
+    if(result.status==='unavailable'){
+      showError(result.message);
+      return;
+    }
+    setProgress(68,'Проверяем обновления','Ожидаем ответ сервера GitHub Releases...');
+    fallbackTimer=setTimeout(()=>{
+      if(!checkFinished&&!updateFound)showError('Сервер обновлений не ответил вовремя.');
+    },25000);
+  }catch(error){showError(String(error?.message||error));}
+})();
+$('launch').addEventListener('click',launch);
 </script></body></html>
