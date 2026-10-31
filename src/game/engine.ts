@@ -130,6 +130,7 @@ export interface PublicState {
     p1Ready: boolean;
     p2Ready: boolean;
     levelIndex: number;
+    mode: "levels" | "endless";
     started: boolean;
   };
   mate: { active: boolean; hp: number; maxHp: number; down: boolean; reviveT: number } | null;
@@ -728,6 +729,7 @@ export class Game {
         p1Ready: this.coop.p1Ready,
         p2Ready: this.coop.p2Ready,
         levelIndex: this.coop.levelIndex,
+        mode: this.coop.mode,
         started: this.coop.started,
       },
       mate: this.mate.active
@@ -1694,8 +1696,20 @@ export class Game {
   coopSetLevel(i: number) {
     let idx = Math.max(0, Math.min(LEVELS.length - 1, i));
     if (this.netRole === "host" && !isUnlocked(this.progress, idx, this.settings.freePlay)) idx = 0;
+    this.coop.mode = "levels";
     this.coop.levelIndex = idx;
     this.level = LEVELS[this.coop.levelIndex];
+    this.applyArena(this.level);
+    this.paper = this.makePaper();
+    this.coop.p1Ready = false;
+    this.coop.p2Ready = false;
+    this.emit();
+  }
+  coopSetMode(mode: "levels" | "endless") {
+    if (mode === "endless" && this.netRole === "host" && this.clearedCount() < 3 && !this.settings.freePlay) return;
+    this.coop.mode = mode;
+    if (mode === "endless") this.coop.levelIndex = 0;
+    this.level = mode === "endless" ? ENDLESS : LEVELS[this.coop.levelIndex] ?? LEVELS[0];
     this.applyArena(this.level);
     this.paper = this.makePaper();
     this.coop.p1Ready = false;
@@ -1716,7 +1730,7 @@ export class Game {
     if (!isUnlocked(this.progress, this.coop.levelIndex, this.settings.freePlay)) this.coop.levelIndex = 0;
     this.coop.started = true;
     this.mate.active = true;
-    this.startLevel(this.coop.levelIndex, false);
+    this.startLevel(this.coop.mode === "endless" ? 0 : this.coop.levelIndex, this.coop.mode === "endless");
   }
   coopLeave() {
     this.netRole = "off";
