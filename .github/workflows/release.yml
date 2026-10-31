@@ -5,6 +5,7 @@ name: Build and Release Ink Arena Remastered
   push:
     branches:
       - main
+      - 'feature/**'
     tags:
       - "v*"
   workflow_dispatch:
