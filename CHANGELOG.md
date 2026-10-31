@@ -1,3 +1,8 @@
+## 1.3.3
+
+- Update checks now time out after 20 seconds if GitHub Releases does not respond, instead of leaving the main-menu button or startup screen stuck indefinitely.
+- The timeout reports a connection error and allows the player to continue using the installed version.
+
 ## 1.3.2
 
 - Startup now waits for the update check and clearly reports when the installed version is current.
