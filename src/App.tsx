@@ -50,6 +50,8 @@ const initial: PublicState = {
   perkChoices: [],
   perkArm: 0,
   pageCut: false,
+  bossId: null,
+  bossPhase: 0,
   finale: null,
   coop: { on: false, role: "off", mateHere: false, p1Ready: false, p2Ready: false, levelIndex: 0, mode: "levels", started: false },
   mate: null,
@@ -306,10 +308,12 @@ export default function App() {
   useEffect(() => {
     const desktop = window.inkDesktop;
     if (!desktop?.setDesktopTear) return;
-    void desktop.setDesktopTear(state.pageCut);
-    if (!state.pageCut) document.documentElement.classList.remove("desktop-tear");
+    const desktopBattle = state.bossId === "mecha" && state.bossPhase >= 4;
+    const active = state.pageCut || desktopBattle;
+    void desktop.setDesktopTear(active);
+    if (!active) document.documentElement.classList.remove("desktop-tear");
     else document.documentElement.classList.add("desktop-tear");
-  }, [state.pageCut]);
+  }, [state.pageCut, state.bossId, state.bossPhase]);
 
   useEffect(() => () => {
     document.documentElement.classList.remove("desktop-tear");
@@ -541,9 +545,10 @@ export default function App() {
   };
 
   return (
-    <div className={`app ${state.pageCut ? "is-cut" : ""}`}>
+    <div className={`app ${state.pageCut ? "is-cut" : ""} ${state.bossId === "mecha" && state.bossPhase === 2 ? "mecha-cyber" : ""} ${state.bossId === "mecha" && state.bossPhase === 3 ? "mecha-pixel" : ""} ${state.bossId === "mecha" && state.bossPhase === 4 ? "mecha-notepad" : ""}`}>
       <div className="stage">
         <canvas ref={canvasRef} className={playing ? "cur-none" : ""} />
+        {playing && state.bossId === "mecha" && state.bossPhase === 4 && <div className="mecha-notepad-window" aria-hidden><header>● ● ● <b>Блокнот — FINAL_BATTLE.txt</b></header><p>МЕХА-НУЛЬ подключился к рабочему столу.</p><p>Последняя фаза запущена...</p><p className="cursor">_</p></div>}
 
         <div className="ui">
           {st === "menu" && (
