@@ -59,13 +59,15 @@ export function MainMenu({ s, onPlay, onLevels, onAlbum, onEndless, onSettings, 
   const lv = LEVELS[resume];
   const touchMode = useCoarsePointer();
   return (
-    <div className="screen menu">
+    <div className="screen menu menu-revision">
       <div className="menu-left">
         <Cap className="rise" style={ix(0)}>тетрадь №13 · рисованный шутер</Cap>
+        <div className="menu-edition rise" style={ix(0)}><span>ГЛОБАЛЬНОЕ ИЗДАНИЕ</span><b>№ 02 / 13</b></div>
         <h1 className="disp menu-title">
           <span className="rise" style={ix(1)}>чернильная</span>
           <span className="rise mk" style={ix(2)}>арена</span>
         </h1>
+        <div className="menu-rule rise" style={ix(3)}><span>ЧЕРНИЛА · БУМАГА · ХАОС</span><i /></div>
         <svg className="menu-drips rise" style={ix(3)} viewBox="0 0 300 40" aria-hidden>
           <g fill="currentColor"><path d="M20 0v14c0 6-3 10-3 14a5 5 0 0 0 10 0c0-4-3-8-3-14V0z" /><path d="M96 0v8c0 4-2 6-2 9a4 4 0 0 0 8 0c0-3-2-5-2-9V0z" /><path d="M188 0v18c0 8-4 12-4 18a6 6 0 0 0 12 0c0-6-4-10-4-18V0z" /><path d="M262 0v6c0 3-2 5-2 7a3.5 3.5 0 0 0 7 0c0-2-2-4-2-7V0z" /></g>
         </svg>
