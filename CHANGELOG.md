@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.3.2 — Mecha visual overhaul
+
+- Rebuilt the Mecha boss as a detailed armored machine with articulated limbs, animated joints, layered armor, reactor, visor and mechanical weaponry.
+- Added recoil and cannon transformation animation, moving rocket exhaust, cyberpunk energy effects, pixel corruption and a redesigned Notepad finale.
+- Preserved the five-phase fight sequence and existing attack logic.
+
 ## 2.3.1 — Mecha visibility fix
 
 - Fixed the Mecha renderer leaking its canvas transform, which could shift the player and make them disappear during the boss fight.
