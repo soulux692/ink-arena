@@ -6756,429 +6756,271 @@ export class Game {
     const ctx = this.ctx;
     const t = this.time;
     const phase = b.phase;
-    const giant = phase > 0;
     const attack = String(b.attack ?? "");
+    const giant = phase > 0;
     const cyber = phase === 2;
     const pixel = phase === 3;
-    const notepad = phase >= 4;
-    const quality = this.quality > 0;
-    const metal = cyber ? "#111b38" : pixel ? "#14251d" : "#26313b";
-    const plate = cyber ? "#23375d" : pixel ? "#315b3b" : "#aebbc3";
-    const light = cyber ? "#00f0ff" : pixel ? "#b7ff4b" : "#e9f0e8";
-    const accent = cyber ? "#ff2ccf" : pixel ? "#ff5b4d" : "#d65a35";
-    const glow = cyber ? "#00eaff" : pixel ? "#aaff45" : "#e1a53d";
-    const pulse = 0.5 + 0.5 * Math.sin(t * 5.4);
-    const recoil = attack === "laser" ? 8 + Math.sin(t * 34) * 2 : attack === "rain" ? 5 : 0;
-    const hover = Math.sin(t * 2.6) * (giant ? 2.5 : 7);
+    const final = phase >= 4;
+    const accent = cyber ? "#d82af0" : pixel ? "#b5ef42" : "#b71d2a";
+    const accentSoft = cyber ? "#6a2b9b" : pixel ? "#526b25" : "#713035";
+    const pulse = 0.5 + Math.sin(t * 5.2) * 0.5;
+    const hover = Math.sin(t * 2.7) * (giant ? 2 : 7);
     const emerge = phase === 1 && b.state === "transition"
-      ? Math.max(0.08, Math.min(1, 1 - b.stateT / 3.4)) : 1;
+      ? Math.max(0.06, Math.min(1, 1 - b.stateT / 3.4)) : 1;
+    const walk = Math.sin(t * 2.4) * (attack === "charge" ? 0.25 : 0.08);
+    const recoil = attack === "laser" ? 8 + Math.sin(t * 34) * 2 : attack === "rain" ? 3 : 0;
 
-    const rounded = (x: number, y: number, w: number, h: number, r: number) => {
-      const rr = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2);
+    const poly = (pts: number[][], fill = INK, width = 3) => {
       ctx.beginPath();
-      ctx.moveTo(x + rr, y);
-      ctx.lineTo(x + w - rr, y);
-      ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
-      ctx.lineTo(x + w, y + h - rr);
-      ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
-      ctx.lineTo(x + rr, y + h);
-      ctx.quadraticCurveTo(x, y + h, x, y + h - rr);
-      ctx.lineTo(x, y + rr);
-      ctx.quadraticCurveTo(x, y, x + rr, y);
+      pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
       ctx.closePath();
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.strokeStyle = PAPER;
+      ctx.lineWidth = width;
+      ctx.stroke();
+      ctx.strokeStyle = INK;
     };
-    const bolt = (x: number, y: number, r = 2.4) => {
-      ctx.fillStyle = "#111820";
-      ctx.beginPath(); ctx.arc(x, y, r + 1, 0, TAU); ctx.fill();
-      ctx.fillStyle = "#dfe8e8";
-      ctx.beginPath(); ctx.arc(x - 0.5, y - 0.5, r * 0.62, 0, TAU); ctx.fill();
-      ctx.strokeStyle = "#53616b"; ctx.lineWidth = 0.8;
-      ctx.beginPath(); ctx.moveTo(x - r * 0.4, y); ctx.lineTo(x + r * 0.4, y); ctx.stroke();
+    const seam = (x1: number, y1: number, x2: number, y2: number, width = 2) => {
+      ctx.strokeStyle = PAPER;
+      ctx.globalAlpha = 0.68;
+      wline(ctx, x1, y1, x2, y2, mulberry32(boil + x1 * 13 + y2), width);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = INK;
     };
-    const panel = (x: number, y: number, w: number, h: number, r: number, base = plate, edge = metal) => {
-      const g = ctx.createLinearGradient(x, y, x + w, y + h);
-      g.addColorStop(0, light);
-      g.addColorStop(0.13, base);
-      g.addColorStop(0.58, edge);
-      g.addColorStop(1, "#080d13");
-      rounded(x, y, w, h, r); ctx.fillStyle = g; ctx.fill();
-      ctx.strokeStyle = "#080d13"; ctx.lineWidth = 5; ctx.stroke();
-      ctx.strokeStyle = cyber ? "#53f7ff" : pixel ? "#a8ff55" : "#e0e8e6";
-      ctx.globalAlpha = 0.48; ctx.lineWidth = 1.2; ctx.stroke(); ctx.globalAlpha = 1;
-      ctx.strokeStyle = "#080d13";
+    const joint = (x: number, y: number, radius = 11) => {
+      ctx.fillStyle = INK;
+      ctx.beginPath(); ctx.arc(x, y, radius + 3, 0, TAU); ctx.fill();
+      ctx.strokeStyle = PAPER; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(x, y, radius, 0, TAU); ctx.stroke();
+      ctx.fillStyle = PAPER; ctx.beginPath(); ctx.arc(x, y, 2.4, 0, TAU); ctx.fill();
+      seam(x - radius * .55, y - radius * .65, x + radius * .55, y + radius * .65, 1.3);
     };
-    const glowLine = (x1: number, y1: number, x2: number, y2: number, width: number) => {
-      ctx.save(); ctx.strokeStyle = glow; ctx.lineCap = "round";
-      ctx.globalAlpha = 0.25 + pulse * 0.32; ctx.lineWidth = width + 7;
-      ctx.shadowColor = glow; ctx.shadowBlur = quality ? 8 : 17;
-      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-      ctx.globalAlpha = 1; ctx.lineWidth = width; ctx.stroke(); ctx.restore();
-    };
-    const piston = (x1: number, y1: number, x2: number, y2: number, width = 7) => {
-      ctx.strokeStyle = "#080d13"; ctx.lineWidth = width + 7; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-      ctx.strokeStyle = "#77858b"; ctx.lineWidth = width; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-      ctx.strokeStyle = light; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x1, y1 - 1); ctx.lineTo(x2, y2 - 1); ctx.stroke();
+    const hatch = (x: number, y: number, count: number, dx: number, dy: number) => {
+      ctx.save(); ctx.strokeStyle = PAPER; ctx.globalAlpha = .52; ctx.lineWidth = 1;
+      for (let i = 0; i < count; i++) {
+        ctx.beginPath(); ctx.moveTo(x + i * dx, y); ctx.lineTo(x + i * dx + dy, y + 13); ctx.stroke();
+      }
+      ctx.restore();
     };
 
     ctx.save();
     ctx.translate(b.x, b.y + hover);
-    ctx.scale(1, Math.max(0.08, emerge));
+    ctx.scale(1, Math.max(.06, emerge));
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
 
     if (!giant) {
-      // The rolling seed is a layered armored mine, not a flat spiked polygon.
-      const roll = t * 3.8;
-      ctx.save(); ctx.rotate(roll);
-      ctx.globalAlpha = 0.24; ctx.fillStyle = "#000";
-      ctx.beginPath(); ctx.ellipse(4, 53, 48, 12, 0, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
-      for (let i = 0; i < 16; i++) {
-        const a = i * TAU / 16;
+      // First form: a living ink mine with white hand-cut spikes and one square eye.
+      ctx.save();
+      ctx.rotate(t * 3.1);
+      ctx.globalAlpha = .3;
+      ctx.fillStyle = "#000";
+      ctx.beginPath(); ctx.ellipse(4, 51, 49, 12, 0, 0, TAU); ctx.fill();
+      ctx.globalAlpha = 1;
+      for (let i = 0; i < 14; i++) {
+        const a = i * TAU / 14;
         ctx.save(); ctx.rotate(a);
-        ctx.fillStyle = i % 2 ? "#8d9ca5" : "#d6e0df";
-        ctx.strokeStyle = "#101820"; ctx.lineWidth = 4;
-        ctx.beginPath(); ctx.moveTo(-8, -23); ctx.lineTo(0, -57 - (i % 3) * 4); ctx.lineTo(9, -23); ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = "#25323b"; ctx.fillRect(-5, -30, 10, 10); ctx.restore();
+        poly([[-8,-22],[0,-58 - (i%3)*4],[9,-23]], i%2 ? "#101010" : "#292929", 2.4);
+        seam(-2,-29,3,-49,1.2);
+        ctx.restore();
       }
-      const orb = ctx.createRadialGradient(-13, -17, 5, 0, 0, 39);
-      orb.addColorStop(0, "#eaf1ed"); orb.addColorStop(0.24, "#74858e"); orb.addColorStop(0.72, "#28343d"); orb.addColorStop(1, "#080d12");
-      ctx.fillStyle = orb; ctx.strokeStyle = "#080d13"; ctx.lineWidth = 5;
-      ctx.beginPath(); ctx.arc(0, 0, 34, 0, TAU); ctx.fill(); ctx.stroke();
-      ctx.strokeStyle = accent; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, 25, 0, TAU); ctx.stroke();
-      ctx.fillStyle = "#d9f6ef"; ctx.shadowColor = glow; ctx.shadowBlur = 14;
-      ctx.beginPath(); ctx.arc(0, 0, 9 + pulse * 2, 0, TAU); ctx.fill(); ctx.shadowBlur = 0;
-      for (let i = 0; i < 8; i++) { const a = i * TAU / 8; bolt(Math.cos(a) * 19, Math.sin(a) * 19, 2); }
+      ctx.fillStyle = "#080808"; ctx.strokeStyle = PAPER; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(0,0,34,0,TAU); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = "#6b6863"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(0,0,26,0,TAU); ctx.stroke();
+      ctx.fillStyle = PAPER; ctx.fillRect(-10,-9,20,17);
+      ctx.fillStyle = INK; ctx.fillRect(-5,-5,10,9);
       ctx.restore();
-      // Rolling sparks and a short motion trail.
-      ctx.globalAlpha = 0.3 + pulse * 0.25; ctx.strokeStyle = glow; ctx.lineWidth = 2;
-      for (let i = 0; i < 3; i++) {
-        const yy = 35 + i * 8;
-        ctx.beginPath(); ctx.moveTo(-40 - i * 10, yy); ctx.lineTo(-67 - i * 12, yy + Math.sin(t * 12 + i) * 5); ctx.stroke();
-      }
+      ctx.globalAlpha = .55;
+      for (let i=0;i<4;i++) seam(-42-i*9,31+i*6,-74-i*11,22+i*9,1.5);
       ctx.globalAlpha = 1;
       ctx.restore();
       return;
     }
 
-    // Reactor shadow and the huge back assembly establish the mech's scale.
+    // Huge ground shadow and the rocket rack behind the shoulders.
     ctx.save();
-    ctx.globalAlpha = 0.28; ctx.fillStyle = "#000";
-    ctx.beginPath(); ctx.ellipse(0, 187, 128, 22, 0, 0, TAU); ctx.fill();
+    ctx.globalAlpha = .28; ctx.fillStyle = "#000";
+    ctx.beginPath(); ctx.ellipse(0, 178, 124, 18, 0, 0, TAU); ctx.fill();
     ctx.restore();
-
-    // Back-mounted reactor housings and six individually animated rocket cells.
-    ctx.save();
-    panel(-66, -91, 132, 74, 13, "#5d6a75", "#111922");
-    for (const side of [-1, 1]) {
-      ctx.save(); ctx.translate(side * 58, -68); ctx.rotate(side * -0.08);
-      panel(-17, -46, 34, 79, 8, "#5f7180", "#0c131b");
-      for (let k = 0; k < 3; k++) {
-        const yy = -34 + k * 22;
-        ctx.fillStyle = "#0a1118"; rounded(-10, yy, 20, 15, 6); ctx.fill();
-        ctx.strokeStyle = "#8c9ba1"; ctx.lineWidth = 2; ctx.stroke();
-        ctx.fillStyle = accent; ctx.fillRect(-2, yy + 3, 4, 9);
+    for (const side of [-1,1]) {
+      ctx.save(); ctx.translate(side*61,-112); ctx.rotate(side*-.08);
+      poly([[-22,-35],[16,-42],[25,38],[-19,32]], "#080808", 3);
+      for(let k=0;k<3;k++) {
+        ctx.fillStyle = "#d9d4ca"; ctx.fillRect(-10,-28+k*20,19,10);
+        ctx.fillStyle = INK; ctx.fillRect(-7,-26+k*20,12,6);
       }
-      ctx.fillStyle = "#0b1118"; ctx.fillRect(-12, 34, 24, 12);
+      seam(-16,-37,15,-31); seam(-15,25,14,29);
+      if(attack==="rain" || attack==="rockets") {
+        ctx.fillStyle = accent; ctx.globalAlpha = .75+pulse*.2;
+        ctx.beginPath(); ctx.moveTo(-7,35); ctx.lineTo(0,61+pulse*15); ctx.lineTo(7,35); ctx.closePath(); ctx.fill();
+        ctx.globalAlpha=1;
+      }
       ctx.restore();
     }
-    // Exposed cable bundle, with a live electrical pulse.
-    for (const side of [-1, 1]) {
-      ctx.strokeStyle = "#090f15"; ctx.lineWidth = 10;
-      ctx.beginPath(); ctx.moveTo(side * 40, -54); ctx.bezierCurveTo(side * 90, -35, side * 90, 28, side * 52, 49); ctx.stroke();
-      ctx.strokeStyle = "#70818a"; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(side * 40, -54); ctx.bezierCurveTo(side * 90, -35, side * 90, 28, side * 52, 49); ctx.stroke();
-      glowLine(side * 42, -45, side * 60, -10, 2);
+    // Coiled ink cables from the launcher pack to the spine.
+    for(const side of [-1,1]) {
+      ctx.strokeStyle=INK; ctx.lineWidth=9;
+      ctx.beginPath(); ctx.moveTo(side*49,-103); ctx.bezierCurveTo(side*90,-70,side*82,-9,side*48,18); ctx.stroke();
+      ctx.strokeStyle=PAPER; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(side*49,-103); ctx.bezierCurveTo(side*90,-70,side*82,-9,side*48,18); ctx.stroke();
     }
-    ctx.restore();
 
-    // Legs: independently animated thighs, knee actuators, shins and weighted feet.
-    const stride = Math.sin(t * 2.3) * (attack === "stomp" ? 0.42 : 0.075);
-    for (const side of [-1, 1]) {
-      ctx.save();
-      ctx.translate(side * 48, 61);
-      ctx.rotate(side * stride);
-      // thigh shell
-      piston(0, 7, side * 4, 62, 12);
-      panel(-22, 5, 44, 59, 9, "#798993", "#111a22");
-      ctx.fillStyle = accent; ctx.fillRect(-15, 17, 30, 5);
-      for (let k = 0; k < 3; k++) {
-        ctx.fillStyle = "#101820"; ctx.fillRect(-14, 30 + k * 8, 28, 3);
-      }
-      bolt(-13, 13); bolt(13, 13);
-      // Knee hinge, layered circular bearing and moving piston.
-      ctx.save(); ctx.translate(0, 66); ctx.rotate(Math.sin(t * 2.3 + side) * 0.05);
-      ctx.fillStyle = "#080e14"; ctx.beginPath(); ctx.arc(0, 0, 18, 0, TAU); ctx.fill();
-      ctx.fillStyle = "#64747d"; ctx.beginPath(); ctx.arc(0, 0, 13, 0, TAU); ctx.fill();
-      ctx.strokeStyle = light; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 9, 0, TAU); ctx.stroke();
-      bolt(0, 0, 3);
-      piston(-12, -8, -17, 38, 5);
-      // shin and ankle
-      panel(-19, 12, 38, 69, 7, "#63747e", "#101820");
-      ctx.fillStyle = metal; ctx.fillRect(-14, 27, 28, 6);
-      glowLine(-8, 22, 8, 22, 2);
-      ctx.save(); ctx.translate(side * 3, 83); ctx.rotate(-side * stride * 0.45);
-      panel(-29, -4, 58, 30, 7, "#9aa8ac", "#0b1118");
-      ctx.fillStyle = "#111920"; ctx.fillRect(-25, 17, 50, 8);
-      for (let k = 0; k < 4; k++) { ctx.fillStyle = glow; ctx.fillRect(-20 + k * 12, 2, 5, 4); }
+    // Walking legs, visibly hinged; their gait changes during a charge.
+    for(const side of [-1,1]) {
+      ctx.save(); ctx.translate(side*43,54); ctx.rotate(side*walk);
+      poly([[-22,-8],[18,-12],[29,55],[12,70],[-26,52]], "#090909", 4);
+      hatch(-17,5,4,7,6);
+      joint(side*3,63,12);
+      ctx.save(); ctx.translate(side*3,63); ctx.rotate(-side*walk*.7);
+      poly([[-17,2],[16,0],[23,76],[5,88],[-21,74]], "#111111", 3);
+      seam(-12,12,8,65,2);
+      seam(9,13,-5,72,1.3);
+      // Broad, torn boots anchor the monster.
+      poly([[-26,75],[22,74],[38,103],[27,116],[-38,110],[-45,91]], "#050505", 4);
+      seam(-30,96,24,99,2);
       ctx.restore();
+      ctx.restore();
+    }
+
+    // Waist: a single black girdle with bone-white rivets.
+    poly([[-57,37],[-45,20],[45,20],[60,42],[46,69],[-46,69]], "#080808", 4);
+    for(const side of [-1,1]) { ctx.fillStyle=PAPER; ctx.beginPath(); ctx.arc(side*34,45,3,0,TAU); ctx.fill(); }
+
+    // Shoulder yoke and articulated arms. Silhouette remains ink, never shiny metal.
+    poly([[-105,-105],[-75,-129],[75,-129],[108,-103],[92,-64],[-92,-64]], "#090909", 4);
+    for(const side of [-1,1]) {
+      ctx.save(); ctx.translate(side*91,-83); ctx.scale(side,1);
+      joint(0,0,17);
+      ctx.rotate(walk*.8 + (attack==="slam" ? -.38 : 0) + (attack==="laser" && side===1 ? -.28 : 0));
+      poly([[-14,7],[24,-4],[51,43],[34,62],[-10,45]], "#0a0a0a", 4);
+      seam(0,9,36,46,2); seam(8,19,25,49,1.2);
+      joint(40,53,12);
+      ctx.save(); ctx.translate(40,53);
+      if(side===1 && phase>=2) {
+        // This arm opens into a jagged ink cannon with a red/purple pixel core.
+        ctx.rotate(-.08 - (attack==="laser" ? .25 : 0));
+        poly([[-14,-14],[35,-20],[67,-8],[78,8],[65,23],[20,22],[-12,13]], "#050505", 4);
+        poly([[45,-10],[76,-6],[85,5],[74,15],[46,12]], PAPER, 2);
+        ctx.fillStyle=accent; ctx.globalAlpha=.8+pulse*.2;
+        ctx.beginPath(); ctx.arc(69,5,5+pulse*2,0,TAU); ctx.fill();
+        ctx.globalAlpha=1;
+        ctx.strokeStyle=PAPER; ctx.lineWidth=2;
+        for(let k=0;k<3;k++){ctx.beginPath();ctx.arc(65,5,11+k*5,-.9,.9);ctx.stroke();}
+        if(attack==="laser") {
+          ctx.globalAlpha=.25+pulse*.3; ctx.strokeStyle=accent; ctx.lineWidth=7;
+          ctx.beginPath();ctx.moveTo(80-recoil,5);ctx.lineTo(112,5);ctx.stroke();ctx.globalAlpha=1;
+        }
+      } else {
+        poly([[-13,-13],[28,-18],[55,-4],[51,19],[18,26],[-13,12]], "#080808", 3);
+        // Simple three-pronged claw, like a hand-cut ink drawing.
+        ctx.strokeStyle=PAPER; ctx.lineWidth=6;
+        for(const s of [-1,1]) {
+          ctx.beginPath();ctx.moveTo(48,s*3);ctx.lineTo(66,s*10);ctx.lineTo(69,s*22);ctx.stroke();
+        }
+        ctx.beginPath();ctx.moveTo(48,0);ctx.lineTo(68,0);ctx.stroke();
+      }
       ctx.restore(); ctx.restore();
     }
 
-    // Pelvis and waist turntable.
-    ctx.save();
-    panel(-55, 42, 110, 44, 10, "#89989f", "#111820");
-    ctx.fillStyle = "#101820"; rounded(-31, 50, 62, 25, 7); ctx.fill();
-    ctx.strokeStyle = light; ctx.lineWidth = 2; ctx.stroke();
-    for (let i = 0; i < 5; i++) { ctx.fillStyle = i % 2 ? accent : "#d7e1dd"; ctx.fillRect(-23 + i * 11, 56, 6, 10); }
-    ctx.restore();
+    // Head: squat helmet, broken antennae and one stark white visor.
+    poly([[-36,-166],[-28,-198],[23,-202],[42,-174],[32,-132],[-32,-132]], "#050505", 4);
+    poly([[-26,-180],[29,-181],[26,-151],[-25,-151]], "#151515", 2);
+    ctx.fillStyle=PAPER; ctx.fillRect(-21,-172,43,12);
+    ctx.fillStyle=INK; ctx.fillRect(-15,-169,30,6);
+    seam(-20,-188,17,-188,2);
+    ctx.strokeStyle=INK; ctx.lineWidth=6;
+    ctx.beginPath();ctx.moveTo(-24,-194);ctx.lineTo(-35,-219);ctx.lineTo(-49,-227);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(23,-195);ctx.lineTo(38,-221);ctx.lineTo(51,-226);ctx.stroke();
+    ctx.strokeStyle=PAPER; ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(-35,-219);ctx.lineTo(-49,-227);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(38,-221);ctx.lineTo(51,-226);ctx.stroke();
+    ctx.fillStyle=accent; ctx.fillRect(-3,-199,7,5);
 
-    // Shoulder yoke and arm pivots are behind the torso.
-    panel(-105, -93, 210, 56, 15, "#687b88", "#0c131b");
-    for (const side of [-1, 1]) {
-      ctx.save(); ctx.translate(side * 91, -68);
-      ctx.fillStyle = "#0a1117"; ctx.beginPath(); ctx.arc(0, 0, 27, 0, TAU); ctx.fill();
-      ctx.fillStyle = "#768891"; ctx.beginPath(); ctx.arc(0, 0, 21, 0, TAU); ctx.fill();
-      ctx.strokeStyle = light; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, 15, t * 1.4, t * 1.4 + Math.PI * 1.4); ctx.stroke();
-      bolt(0, 0, 4);
-      ctx.restore();
-    }
+    // Main body is one weighty ink mass with torn armor flanges and chalk scratches.
+    poly([[-73,-129],[-48,-151],[49,-151],[76,-125],[91,-25],[69,46],[42,64],[-48,64],[-72,43],[-92,-28]], "#080808", 5);
+    poly([[-57,-116],[-36,-137],[35,-137],[58,-112],[60,-23],[43,16],[-42,16],[-60,-24]], "#171717", 3);
+    // Uneven breastplate seams and paper-white slash highlights.
+    seam(-52,-103,-28,-83,2.5); seam(50,-103,28,-83,2.5);
+    seam(-64,-28,-37,-5,2); seam(63,-29,35,-4,2);
+    seam(-42,32,-23,44,1.6); seam(41,32,23,44,1.6);
+    hatch(-48,-64,4,9,3); hatch(20,-65,4,8,-3);
+    // Chest core: a paper ring with one restrained phase-color center.
+    ctx.fillStyle="#050505"; ctx.beginPath();ctx.arc(0,-49,27,0,TAU);ctx.fill();
+    ctx.strokeStyle=PAPER;ctx.lineWidth=4;ctx.beginPath();ctx.arc(0,-49,22,0,TAU);ctx.stroke();
+    ctx.strokeStyle="#77716a";ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(0,-49,15,t*.5,t*.5+4.4);ctx.stroke();
+    ctx.fillStyle=accent;ctx.globalAlpha=.7+pulse*.25;
+    ctx.beginPath();ctx.arc(0,-49,8+pulse*2,0,TAU);ctx.fill();ctx.globalAlpha=1;
+    ctx.fillStyle=PAPER;ctx.font='bold 9px monospace';ctx.textAlign="center";ctx.fillText("M-07",0,39);
 
-    // Arms are drawn as real articulated assemblies. The right forearm unfolds into a cannon.
-    const armSwing = Math.sin(t * 2.1) * 0.12;
-    const firing = attack === "laser" || attack === "cone" || attack === "beam";
-    for (const side of [-1, 1]) {
+    // Armor is deliberately asymmetrical and chipped, not polished sci-fi panels.
+    poly([[-102,-118],[-82,-144],[-60,-122],[-71,-71],[-105,-79]], "#050505", 4);
+    poly([[82,-126],[105,-141],[125,-111],[118,-69],[83,-71]], "#050505", 4);
+    poly([[-110,-111],[-123,-96],[-120,-57],[-104,-67]], "#171717", 2);
+    poly([[109,-110],[126,-95],[124,-58],[108,-68]], "#171717", 2);
+    seam(-100,-112,-81,-82,2); seam(102,-114,87,-84,2);
+
+    // Phase 2: violet/pink ink aura, never a full-screen metallic palette swap.
+    if(cyber) {
       ctx.save();
-      ctx.translate(side * 91, -67);
-      ctx.scale(side, 1);
-      const upperAngle = armSwing + (firing && side === 1 ? -0.28 : 0);
-      ctx.rotate(upperAngle);
-      // upper arm housing
-      piston(0, 1, 44, 9, 9);
-      panel(7, -17, 44, 34, 8, "#7c8c95", "#101820");
-      ctx.fillStyle = accent; ctx.fillRect(14, -11, 28, 5);
-      bolt(16, 10); bolt(43, 10);
-      // elbow bearing
-      ctx.save(); ctx.translate(49, 0); ctx.rotate(Math.sin(t * 3 + side) * 0.07);
-      ctx.fillStyle = "#0a1117"; ctx.beginPath(); ctx.arc(0, 0, 15, 0, TAU); ctx.fill();
-      ctx.fillStyle = "#7e8f98"; ctx.beginPath(); ctx.arc(0, 0, 10, 0, TAU); ctx.fill();
-      ctx.strokeStyle = glow; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 12, 0.2, 2.4); ctx.stroke();
-      bolt(0, 0, 3);
-      if (side === 1 && phase >= 2) {
-        // transformable weapon: forearm armor retracts, exposing a concentric energy cannon.
-        ctx.rotate(-0.05 + Math.sin(t * 7) * 0.025 - (firing ? 0.16 : 0));
-        panel(3, -19, 66, 38, 9, "#4f6074", "#0a1019");
-        ctx.fillStyle = "#101722"; rounded(17, -13, 44, 26, 6); ctx.fill();
-        ctx.fillStyle = accent; ctx.fillRect(20, -10, 34, 4);
-        ctx.fillStyle = glow; ctx.globalAlpha = 0.5 + pulse * 0.5;
-        ctx.shadowColor = glow; ctx.shadowBlur = quality ? 8 : 18;
-        ctx.beginPath(); ctx.arc(57, 0, 8 + pulse * 2, 0, TAU); ctx.fill();
-        ctx.shadowBlur = 0; ctx.globalAlpha = 1;
-        for (let k = 0; k < 3; k++) {
-          ctx.strokeStyle = "#b8c6d0"; ctx.lineWidth = 3;
-          ctx.beginPath(); ctx.arc(63, 0, 13 + k * 5, -1.05, 1.05); ctx.stroke();
-        }
-        ctx.fillStyle = "#080d13"; ctx.beginPath(); ctx.ellipse(72 - recoil, 0, 10, 15, 0, 0, TAU); ctx.fill();
-        ctx.fillStyle = glow; ctx.globalAlpha = firing ? 0.9 : 0.5 + pulse * 0.25;
-        ctx.beginPath(); ctx.ellipse(74 - recoil, 0, 4, 8, 0, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
-      } else {
-        panel(1, -16, 55, 32, 8, "#71818a", "#101820");
-        ctx.fillStyle = "#111a21"; ctx.fillRect(15, -8, 32, 16);
-        for (let k = 0; k < 3; k++) { ctx.fillStyle = light; ctx.fillRect(19 + k * 10, -5, 5, 10); }
-        // three-finger industrial claw
-        ctx.strokeStyle = "#9caeb3"; ctx.lineWidth = 7;
-        for (const sy of [-1, 1]) {
-          ctx.beginPath(); ctx.moveTo(51, sy * 5); ctx.lineTo(65, sy * 9); ctx.lineTo(70, sy * 17); ctx.stroke();
-        }
-        ctx.beginPath(); ctx.moveTo(53, 0); ctx.lineTo(68, 0); ctx.stroke();
+      ctx.globalAlpha=.45+pulse*.2;ctx.strokeStyle=accent;ctx.lineWidth=2;
+      for(let i=0;i<4;i++) {
+        ctx.beginPath();ctx.ellipse(0,-28,125+i*9,160+i*5,t*.08*(i%2?1:-1),0,TAU);ctx.stroke();
       }
       ctx.restore();
-      ctx.restore();
-    }
-
-    // Neck, head cradle and exhaust vents.
-    ctx.save();
-    panel(-26, -124, 52, 39, 8, "#71838d", "#101820");
-    piston(-10, -124, -10, -91, 5); piston(10, -124, 10, -91, 5);
-    ctx.restore();
-
-    // Head: armored helmet with cheek plates, antenna, sensor lenses and moving target visor.
-    ctx.save();
-    const look = Math.max(-0.2, Math.min(0.2, (this.player.x - b.x) / 520));
-    ctx.translate(0, -148);
-    ctx.rotate(look * 0.6 + Math.sin(t * 1.7) * 0.018);
-    // antenna and side ears
-    ctx.strokeStyle = "#111820"; ctx.lineWidth = 6;
-    ctx.beginPath(); ctx.moveTo(0, -38); ctx.lineTo(6, -63); ctx.lineTo(22, -70); ctx.stroke();
-    ctx.fillStyle = accent; ctx.shadowColor = accent; ctx.shadowBlur = 12;
-    ctx.beginPath(); ctx.arc(22, -70, 5, 0, TAU); ctx.fill(); ctx.shadowBlur = 0;
-    for (const side of [-1, 1]) {
-      panel(side * 34 - 9, -17, 18, 37, 5, "#89999e", "#101820");
-      ctx.fillStyle = accent; ctx.fillRect(side * 36 - 3, -8, 6, 13);
-    }
-    panel(-38, -39, 76, 58, 11, "#a1adb0", "#111922");
-    // brow ridge and deep visor cavity
-    ctx.fillStyle = "#080f17"; rounded(-31, -26, 62, 29, 8); ctx.fill();
-    ctx.strokeStyle = "#0a1016"; ctx.lineWidth = 4; ctx.stroke();
-    const visor = ctx.createLinearGradient(-25, -20, 26, 2);
-    visor.addColorStop(0, cyber ? "#f324b7" : "#b33c2e");
-    visor.addColorStop(0.5, glow);
-    visor.addColorStop(1, cyber ? "#00ecff" : "#f4e9b4");
-    ctx.fillStyle = visor; ctx.shadowColor = glow; ctx.shadowBlur = quality ? 8 : 17;
-    rounded(-24, -21, 48, 17, 5); ctx.fill(); ctx.shadowBlur = 0;
-    // scanning line
-    ctx.globalAlpha = 0.25 + pulse * 0.45; ctx.fillStyle = "#fff";
-    ctx.fillRect(-21, -18 + pulse * 10, 42, 2); ctx.globalAlpha = 1;
-    // mouth grille and forehead insignia
-    ctx.fillStyle = "#111820"; rounded(-17, 8, 34, 8, 3); ctx.fill();
-    for (let k = 0; k < 5; k++) { ctx.fillStyle = light; ctx.fillRect(-13 + k * 6, 10, 2, 4); }
-    ctx.fillStyle = accent; ctx.beginPath(); ctx.moveTo(0, -34); ctx.lineTo(7, -27); ctx.lineTo(0, -22); ctx.lineTo(-7, -27); ctx.closePath(); ctx.fill();
-    bolt(-28, -29); bolt(28, -29);
-    ctx.restore();
-
-    // Main torso: overlapping breastplate, side armor, vents, reactor and ID markings.
-    ctx.save();
-    // side rib armor
-    for (const side of [-1, 1]) {
-      ctx.save(); ctx.translate(side * 51, -18); ctx.rotate(side * 0.06);
-      panel(-17, -49, 34, 105, 9, "#647783", "#0b121a");
-      ctx.fillStyle = "#0b121a";
-      for (let k = 0; k < 5; k++) ctx.fillRect(-9, -34 + k * 14, 18, 5);
-      glowLine(-8, -37, 8, -37, 2);
-      bolt(0, 40);
-      ctx.restore();
-    }
-    // torso silhouette and layered breastplate
-    panel(-59, -94, 118, 166, 17, "#8e9da2", "#0a1119");
-    ctx.fillStyle = "#111a22";
-    ctx.beginPath(); ctx.moveTo(-48, -78); ctx.lineTo(-29, -91); ctx.lineTo(29, -91); ctx.lineTo(48, -78);
-    ctx.lineTo(42, 32); ctx.lineTo(0, 59); ctx.lineTo(-42, 32); ctx.closePath(); ctx.fill();
-    panel(-46, -82, 92, 112, 13, "#b6c0bd", "#293640");
-    // engraved armor cuts
-    ctx.strokeStyle = "#53636a"; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(-39, -54); ctx.lineTo(-19, -43); ctx.lineTo(-19, -17); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(39, -54); ctx.lineTo(19, -43); ctx.lineTo(19, -17); ctx.stroke();
-    // warning stripes across the lower breastplate
-    ctx.save(); ctx.beginPath(); ctx.rect(-31, 27, 62, 12); ctx.clip();
-    ctx.fillStyle = accent; ctx.fillRect(-35, 27, 70, 12);
-    ctx.strokeStyle = "#101820"; ctx.lineWidth = 5;
-    for (let x = -38; x < 40; x += 15) { ctx.beginPath(); ctx.moveTo(x, 42); ctx.lineTo(x + 18, 25); ctx.stroke(); }
-    ctx.restore();
-    // central reactor containment ring
-    ctx.fillStyle = "#0b121a"; ctx.beginPath(); ctx.arc(0, -26, 28, 0, TAU); ctx.fill();
-    ctx.strokeStyle = "#5b6b74"; ctx.lineWidth = 7; ctx.beginPath(); ctx.arc(0, -26, 25, 0, TAU); ctx.stroke();
-    ctx.strokeStyle = glow; ctx.lineWidth = 3; ctx.shadowColor = glow; ctx.shadowBlur = quality ? 8 : 20;
-    ctx.beginPath(); ctx.arc(0, -26, 19 + pulse * 2, t * 0.7, t * 0.7 + Math.PI * 1.7); ctx.stroke();
-    ctx.fillStyle = glow; ctx.globalAlpha = 0.22 + pulse * 0.32;
-    ctx.beginPath(); ctx.arc(0, -26, 16, 0, TAU); ctx.fill();
-    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
-    ctx.fillStyle = "#f4fff2"; ctx.beginPath(); ctx.arc(0, -26, 7 + pulse * 1.5, 0, TAU); ctx.fill();
-    // reactor spokes
-    for (let i = 0; i < 8; i++) {
-      const a = i * TAU / 8 + t * 0.35;
-      ctx.strokeStyle = "#c4d1ce"; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(Math.cos(a) * 26, -26 + Math.sin(a) * 26);
-      ctx.lineTo(Math.cos(a) * 36, -26 + Math.sin(a) * 36); ctx.stroke();
-    }
-    // chest status lights, vents and bolts
-    for (const side of [-1, 1]) {
-      ctx.fillStyle = glow; ctx.globalAlpha = 0.65 + pulse * 0.3;
-      rounded(side * 30 - 7, -69, 14, 5, 2); ctx.fill(); ctx.globalAlpha = 1;
-      for (let k = 0; k < 3; k++) {
-        ctx.fillStyle = "#17232a"; ctx.fillRect(side * 30 - 8, -4 + k * 7, 16, 3);
+      for(let side of [-1,1]) {
+        seam(side*48,-49,side*78,-82,2.6);
+        seam(side*48,-30,side*69,-6,2);
       }
-      bolt(side * 40, -62); bolt(side * 38, 47);
     }
-    ctx.fillStyle = "#10171e"; ctx.font = "bold 10px monospace"; ctx.textAlign = "center";
-    ctx.fillText("M - 07", 0, 56);
-    ctx.restore();
 
-    // Phase 2+: cybernetic halos, exposed neon circuits and a charging muzzle.
-    if (phase >= 2) {
+    // Phase 3: the same ink monster is torn into pixel blocks, it does not become a new genre.
+    if(pixel) {
       ctx.save();
-      ctx.globalAlpha = 0.45 + pulse * 0.22;
-      ctx.strokeStyle = glow; ctx.lineWidth = 2;
-      for (let i = 0; i < 3; i++) {
-        ctx.beginPath(); ctx.ellipse(0, -3, 133 + i * 13, 150 + i * 8, t * 0.11 * (i % 2 ? -1 : 1), 0, TAU); ctx.stroke();
+      ctx.globalAlpha=.85;
+      ctx.fillStyle=accent;
+      for(let i=0;i<15;i++) {
+        const x=Math.round((Math.sin(i*18.3+t*7)*108)/6)*6;
+        const y=Math.round((-122+((i*29+t*39)%255))/6)*6;
+        ctx.fillRect(x,y,5+(i%3)*3,5+(i%3)*3);
       }
-      ctx.globalAlpha = 1;
-      // circuit traces run from the heart to both shoulder pylons
-      for (const side of [-1, 1]) {
-        glowLine(side * 25, -26, side * 66, -44, 2);
-        glowLine(side * 66, -44, side * 93, -72, 2);
-      }
+      ctx.fillStyle=PAPER;
+      for(let i=0;i<5;i++)ctx.fillRect(-100,-104+i*42,Math.round(25+Math.sin(t*8+i)*18),3);
       ctx.restore();
     }
 
-    // Back rockets lift and ignite during salvo; their exhaust has a staged flicker.
-    if (attack === "rain" || attack === "rockets") {
-      ctx.save();
-      ctx.globalAlpha = 0.8 + pulse * 0.2;
-      for (const side of [-1, 1]) {
-        ctx.save(); ctx.translate(side * 58, -36);
-        ctx.fillStyle = "#fff0c0"; ctx.shadowColor = accent; ctx.shadowBlur = 20;
-        ctx.beginPath(); ctx.moveTo(-7, 22); ctx.lineTo(0, 56 + pulse * 12); ctx.lineTo(7, 22); ctx.closePath(); ctx.fill();
-        ctx.fillStyle = accent; ctx.beginPath(); ctx.moveTo(-4, 24); ctx.lineTo(0, 43 + pulse * 9); ctx.lineTo(4, 24); ctx.closePath(); ctx.fill();
-        ctx.restore();
-      }
+    // Final breach: rough floating notepad paper, matching the ink notebook instead of a glossy OS card.
+    if(final) {
+      ctx.save();ctx.translate(0,158+Math.sin(t*2.3)*4);ctx.rotate(Math.sin(t*1.2)*.025);
+      poly([[-152,-46],[151,-47],[158,52],[-147,55]], "#eee9df", 3);
+      ctx.fillStyle="#0a0a0a";ctx.fillRect(-148,-43,296,18);
+      ctx.fillStyle="#f5f0e6";ctx.font="bold 10px monospace";ctx.textAlign="left";
+      ctx.fillText("NOTEPAD.EXE / FINAL_BATTLE.TXT",-138,-30);
+      ctx.fillStyle="#151515";ctx.font="12px monospace";
+      ctx.fillText("> MECHA CORE: UNLOCKED",-137,-7);
+      ctx.fillText("> PLAYER PROCESS DETECTED",-137,11);
+      ctx.fillText("> TERMINATE? [NO] [NO] [NO]",-137,29);
+      ctx.fillStyle=accent;ctx.fillRect(-140,39,278,3);
       ctx.restore();
+      ctx.globalAlpha=.7;
+      for(let i=0;i<6;i++) {
+        const x=Math.sin(t*1.8+i*2)*130;
+        const y=-125+i*42+Math.cos(t*2+i)*5;
+        ctx.fillStyle=i%2?accent:PAPER;ctx.fillRect(x,y,8+i*2,3);
+      }
+      ctx.globalAlpha=1;
     }
 
-    // Digital phase: hard pixel offsets, broken scan bands and square fragments.
-    if (pixel) {
-      ctx.save();
-      ctx.globalAlpha = 0.32 + pulse * 0.18;
-      ctx.fillStyle = "#baff55";
-      for (let i = 0; i < 18; i++) {
-        const x = Math.sin(i * 19.7 + t * 7) * 130;
-        const y = -130 + ((i * 37 + t * 48) % 260);
-        ctx.fillRect(Math.round(x / 5) * 5, Math.round(y / 5) * 5, 4 + (i % 3) * 3, 4 + (i % 3) * 3);
-      }
-      ctx.fillStyle = "#ff564d";
-      for (let i = 0; i < 7; i++) {
-        const yy = -110 + i * 32 + Math.sin(t * 9 + i) * 4;
-        ctx.fillRect(-118, yy, 236, 2);
-      }
-      ctx.restore();
-    }
-
-    // Final phase tears the robot into floating desktop windows and a corrupted notepad panel.
-    if (notepad) {
-      ctx.save();
-      ctx.translate(0, 160 + Math.sin(t * 2.5) * 4);
-      ctx.rotate(Math.sin(t * 1.3) * 0.025);
-      ctx.shadowColor = "#000"; ctx.shadowBlur = 22;
-      ctx.fillStyle = "#e7e7e7"; ctx.strokeStyle = "#101010"; ctx.lineWidth = 3;
-      rounded(-154, -48, 308, 105, 4); ctx.fill(); ctx.stroke(); ctx.shadowBlur = 0;
-      ctx.fillStyle = "#101820"; ctx.fillRect(-154, -48, 308, 19);
-      ctx.fillStyle = "#eaf4f7"; ctx.font = "bold 10px monospace"; ctx.textAlign = "left";
-      ctx.fillText("NOTEPAD.EXE  /  SYSTEM OVERRIDE", -143, -35);
-      ctx.fillStyle = "#c94d42"; ctx.fillRect(129, -45, 15, 13);
-      ctx.fillStyle = "#111"; ctx.font = "12px monospace";
-      ctx.fillText("> MECHA CORE: UNLOCKED", -140, -11);
-      ctx.fillText("> PLAYER PROCESS DETECTED", -140, 9);
-      ctx.fillText("> TERMINATE?  [NO] [NO] [NO]", -140, 29);
-      ctx.fillStyle = "#3187a7"; ctx.fillRect(-146, 43, 284, 4);
-      ctx.restore();
-      // Floating corrupted window fragments.
-      ctx.globalAlpha = 0.7;
-      for (let i = 0; i < 5; i++) {
-        const x = Math.sin(t * 1.8 + i * 2) * (112 + i * 9);
-        const y = -130 + i * 44 + Math.cos(t * 2 + i) * 5;
-        ctx.fillStyle = i % 2 ? "#00f0ff" : "#ff2ccf";
-        ctx.fillRect(x, y, 8 + i * 3, 3);
-      }
-      ctx.globalAlpha = 1;
-    }
-
-    // Damage feedback catches the full silhouette instead of only the center point.
-    if (b.flash > 0) {
-      ctx.globalAlpha = 0.22 + Math.sin(t * 42) * 0.12;
-      ctx.fillStyle = "#fff";
-      rounded(-94, -181, 188, 380, 26); ctx.fill();
-      ctx.globalAlpha = 1;
+    if(b.flash>0) {
+      ctx.globalAlpha=.25+Math.sin(t*39)*.12;
+      ctx.fillStyle=PAPER;
+      ctx.beginPath();ctx.ellipse(0,-51,105,180,0,0,TAU);ctx.fill();
+      ctx.globalAlpha=1;
     }
     ctx.restore();
   }
+
     drawBoss(boil: number) {
     if (this.boss && isTent(this.boss)) {
       this.drawTentacleBoss(boil);
@@ -7742,56 +7584,116 @@ export class Game {
       ctx.restore();
     }
 
-    // boss bar
+    // boss bar: torn notebook strip, blood-red ink fill and a stamped boss seal.
     const boss = this.boss;
     if (boss && boss.state !== "finale") {
-      const bx = W / 2 - 210;
-      const by = 92;
-      ctx.lineWidth = 2.5;
-      wrect(ctx, bx, by, 420, 22, r, 2);
-      // phase segmentation
+      const bw = Math.min(560, W - 260);
+      const bh = 24;
+      const bx = W / 2 - bw / 2;
+      const by = 102;
+      const hpRatio = Math.max(0, Math.min(1, boss.hp / boss.maxHp));
+      const phaseCount = boss.def.id === "queen" ? 2 : boss.def.phases.length;
+
+      ctx.save();
+      ctx.lineJoin = "miter";
+      ctx.textAlign = "center";
+      ctx.fillStyle = PAPER;
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = 3.5;
+      ctx.font = 'bold 22px "Kelly Slab", serif';
+      ctx.fillText("BOSS  /  " + boss.def.name, W / 2, by - 12);
+
+      // Black torn-paper trough.
+      ctx.beginPath();
+      ctx.moveTo(bx - 5, by + 2);
+      ctx.lineTo(bx + 8, by - 3);
+      ctx.lineTo(bx + bw - 13, by - 2);
+      ctx.lineTo(bx + bw + 5, by + 4);
+      ctx.lineTo(bx + bw - 4, by + bh + 3);
+      ctx.lineTo(bx + 10, by + bh + 4);
+      ctx.lineTo(bx - 6, by + bh - 2);
+      ctx.closePath();
+      ctx.fillStyle = INK;
+      ctx.fill();
+      ctx.strokeStyle = PAPER;
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
+
+      // Red health ink, deliberately uneven at the right edge.
       ctx.save();
       ctx.beginPath();
-      ctx.rect(bx + 2, by + 2, 416 * Math.max(0, boss.hp / boss.maxHp), 18);
+      ctx.moveTo(bx + 3, by + 3);
+      ctx.lineTo(bx + bw * hpRatio, by + 3);
+      ctx.lineTo(bx + bw * hpRatio + 3, by + 8);
+      ctx.lineTo(bx + bw * hpRatio - 2, by + bh - 3);
+      ctx.lineTo(bx + 2, by + bh - 3);
+      ctx.closePath();
       ctx.clip();
-      for (let i = 0; i < 70; i++) {
-        const h = 12 + Math.sin(i * 1.7 + boil) * 6;
-        wline(ctx, bx + 2 + i * 6, by + 2 + 9 - h / 2, bx + 2 + i * 6, by + 2 + 9 + h / 2, mulberry32(i + boil), 1.4);
+      ctx.fillStyle = "#b51827";
+      ctx.fillRect(bx, by, bw, bh);
+      ctx.strokeStyle = "rgba(255,245,235,.35)";
+      ctx.lineWidth = 1.2;
+      for (let i = 0; i < 46; i++) {
+        const xx = bx + i * 13;
+        wline(ctx, xx, by + 4 + (i % 3) * 3, xx + 7, by + 17 + (i % 4), mulberry32(i + boil), 1);
       }
       ctx.restore();
-      ctx.lineWidth = 2;
-      const phaseCount = boss.def.id === "queen" ? 2 : boss.def.phases.length;
-      for (let i = 1; i < phaseCount; i++) wline(ctx, bx + (420 * i) / phaseCount, by, bx + (420 * i) / phaseCount, by + 22, r, 1.5);
-      ctx.font = `bold 25px "Kelly Slab", serif`;
-      ctx.fillText(boss.def.name, W / 2, by - 12);
-      ctx.font = `17px "Caveat", cursive`;
-      ctx.fillText(boss.def.title + ` · ${boss.def.phaseNames[boss.phase]}`, W / 2, by + 38);
+
+      // Phase cuts look like small scratched dividers rather than UI ticks.
+      ctx.strokeStyle = PAPER;
+      ctx.lineWidth = 1.6;
+      for (let i = 1; i < phaseCount; i++) {
+        const px = bx + (bw * i) / phaseCount;
+        wline(ctx, px, by - 1, px + 1, by + bh + 2, r, 1.2);
+      }
+      // Rough crown/skull seal at the right edge.
+      ctx.save();
+      ctx.translate(bx + bw + 24, by + bh / 2);
+      ctx.beginPath();
+      for (let i = 0; i < 12; i++) {
+        const a = -Math.PI / 2 + i * TAU / 12;
+        const rad = i % 2 === 0 ? 23 : 13;
+        const x = Math.cos(a) * rad;
+        const y = Math.sin(a) * rad;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.fillStyle = PAPER;
+      ctx.fill();
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
+      ctx.fillStyle = INK;
+      ctx.beginPath(); ctx.arc(-5, -1, 2.3, 0, TAU); ctx.arc(5, -1, 2.3, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-5, 7); ctx.lineTo(5, 7); ctx.stroke();
+      ctx.restore();
+
+      ctx.fillStyle = PAPER;
+      ctx.font = '16px "Caveat", cursive';
+      ctx.fillText(boss.def.phaseNames[boss.phase] || "FINAL PHASE", W / 2, by + 44);
       for (let i = 0; i < phaseCount; i++) {
-        const px = W / 2 - ((phaseCount - 1) * 26) / 2 + i * 26;
-        ctx.lineWidth = 2;
-        wcircle(ctx, px, by + 56, 5, mulberry32(boil + i), 1, 1);
-        if (i <= (boss.def.id === "queen" ? (boss.phase === 2 ? 1 : 0) : boss.phase)) ctx.fillRect(px - 3, by + 53, 6, 6);
+        const px = W / 2 - ((phaseCount - 1) * 25) / 2 + i * 25;
+        ctx.lineWidth = 1.8;
+        wcircle(ctx, px, by + 60, 4.5, mulberry32(boil + i), 1, 1);
+        if (i <= (boss.def.id === "queen" ? (boss.phase === 2 ? 1 : 0) : boss.phase)) {
+          ctx.fillStyle = PAPER;
+          ctx.fillRect(px - 2.5, by + 57, 5, 5);
+        }
       }
       if (boss.attack) {
         const labels: Record<string, string> = {
-          ring: "КРУГОВОЙ ЗАЛП!",
-          spiral: "СПИРАЛЬ!",
-          aimed: "ПРИЦЕЛ!",
-          rain: "ЧЕРНИЛЬНЫЙ ДОЖДЬ!",
-          summon: "ЗОВ СВИТЫ!",
-          slam: "УДАР!",
-          laser: "ЛУЧ!",
-          charge: "РЫВОК!",
-          mines: "МИНЫ!",
-          diagonal: "ДИАГОНАЛЬНЫЙ ТАРАН!",
-          slash: "РАЗРЕЗ ПОЛЯ!",
+          ring: "КРУГОВОЙ ЗАЛП!", spiral: "СПИРАЛЬ!", aimed: "ПРИЦЕЛ!",
+          rain: "РАКЕТНЫЙ ЗАЛП!", summon: "ЗОВ СВИТЫ!", slam: "УДАР!",
+          laser: "ЛУЧ РАЗРУШЕНИЯ!", charge: "РЫВОК!", mines: "МИНЫ!",
+          diagonal: "ДИАГОНАЛЬНЫЙ ТАРАН!", slash: "РАЗРЕЗ ПОЛЯ!",
         };
-        ctx.font = `bold 22px "Kelly Slab", serif`;
         const pulse = 0.65 + Math.sin(this.time * 22) * 0.35;
         ctx.globalAlpha = pulse;
-        ctx.fillText(labels[boss.attack] || SPECIAL_LABELS[boss.attack] || "!", W / 2, by + 84);
+        ctx.font = 'bold 19px "Kelly Slab", serif';
+        ctx.fillText(labels[boss.attack] || SPECIAL_LABELS[boss.attack] || "!", W / 2, by + 86);
         ctx.globalAlpha = 1;
       }
+      ctx.restore();
     }
 
     // weapon slots

@@ -1,7 +1,7 @@
 {
   "name": "ink-arena-remastered",
   "private": true,
-  "version": "2.3.2",
+  "version": "2.3.3",
   "type": "module",
   "description": "Ink Arena Remastered desktop game",
   "main": "electron/main.cjs",
