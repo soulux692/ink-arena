@@ -59,7 +59,7 @@ export const BOSSES: Record<BossId, BossDef> = {
     id: "tentacle",
     name: "ВЛАДЫКА ЩУПАЛЕЦ",
     title: "чернильная бездна тянется к тебе",
-    hp: 90,
+    hp: 135,
     r: 44,
     phases: [
       ["lash", "aimed", "sweep"],
@@ -89,7 +89,7 @@ export const BOSSES: Record<BossId, BossDef> = {
     id: "queen",
     name: "КОРОЛЕВА РОЯ",
     title: "жужжащий кошмар промокашки",
-    hp: 130,
+    hp: 195,
     r: 42,
     phases: [
       ["diagonal", "hive", "aimed", "diagonal"],
@@ -104,7 +104,7 @@ export const BOSSES: Record<BossId, BossDef> = {
     id: "octopus",
     name: "ЧЕРНИЛЬНЫЙ СПРУТ",
     title: "восемь щупалец, ноль жалости",
-    hp: 175,
+    hp: 263,
     r: 44,
     phases: [
       ["laser", "aimed", "slam"],
