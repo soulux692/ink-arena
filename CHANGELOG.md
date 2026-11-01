@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.3.0 — Mecha Finale
+
+- Added the five-phase Mecha boss immediately after the Queen of the Swarm.
+- Added the rolling spiked core, giant mech emergence, cone-beam fan, rocket salvos, cyberpunk and pixel phases, and the desktop/Notepad finale.
+- Removed the King defeat question text and duplicate page-void rendering.
+- Updated the boss phase preview and bestiary.
+
+
 ## 2.2.0 — Full Notebook & Effects Update
 
 - Rebuilt the main menu as a full notebook spread: larger hand-inked title, stamped edition header, ruled paper, bold chapter buttons and tilted dossier cards.

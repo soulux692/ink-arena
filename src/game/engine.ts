@@ -123,6 +123,8 @@ export interface PublicState {
   perkChoices: PerkId[];
   perkArm: number;
   pageCut: boolean;
+  bossId: string | null;
+  bossPhase: number;
   coop: {
     on: boolean;
     role: "off" | "host" | "guest";
@@ -722,6 +724,8 @@ export class Game {
       perkChoices: [...this.perkChoices],
       perkArm: this.perkArm,
       pageCut: this.pageCut,
+      bossId: this.boss?.def.id ?? null,
+      bossPhase: this.boss?.phase ?? 0,
       coop: {
         on: this.coop.on,
         role: this.netRole,
@@ -2640,8 +2644,9 @@ export class Game {
       if (b.phase === 0 && b.hp <= b.maxHp * 0.5) this.bossPhaseChange(2);
       return;
     }
-    const threshold = b.maxHp * (b.phase === 0 ? 0.66 : 0.33);
-    if (b.phase < 2 && b.hp <= threshold) this.bossPhaseChange(b.phase + 1);
+    const phaseCount = b.def.phases.length;
+    const threshold = b.maxHp * (1 - (b.phase + 1) / phaseCount);
+    if (b.phase < phaseCount - 1 && b.hp <= threshold) this.bossPhaseChange(b.phase + 1);
   }
 
   bossPhaseChange(next: number) {
@@ -2649,7 +2654,8 @@ export class Game {
     b.phase = next;
     clearSpecial(this);
     b.state = "transition";
-    b.stateT = b.def.id === "queen" ? 2.6 : 1.6;
+    b.stateT = b.def.id === "queen" ? 2.6 : b.def.id === "mecha" && next === 1 ? 3.4 : 1.6;
+    if (b.def.id === "mecha") { b.r = next === 0 ? 24 : 88; b.attackCd = 1.6; if (next === 1) { b.targetX = W / 2; b.targetY = 156; } }
     b.attack = null;
     b.telegraph = 0;
     b.emit = null;
@@ -3291,6 +3297,35 @@ export class Game {
       return;
     }
     const speed = 165 + b.phase * 20;
+    if (b.def.id === "mecha") {
+      if (kind === "laser") {
+        const base = Math.atan2(p.y - b.y, p.x - b.x);
+        // Broad five-lane cone: warning is the boss' glowing cannon arm.
+        for (let i = -3; i <= 3; i++) {
+          const angle = base + i * (b.phase >= 3 ? 0.105 : 0.16);
+          this.ebullets.push({ x: b.x, y: b.y, vx: Math.cos(angle) * 350, vy: Math.sin(angle) * 350, life: 3.2, dmg: 1, r: 7 });
+        }
+        this.shake = 15; sfx.laserFire(); return;
+      }
+      if (kind === "rain") {
+        // Twin back racks launch a staggered homing-looking rocket fan.
+        for (let i = -2; i <= 2; i++) {
+          const angle = Math.atan2(p.y - b.y, p.x - b.x) + i * 0.19;
+          this.ebullets.push({ x: b.x - 36, y: b.y - 42, vx: Math.cos(angle) * 250, vy: Math.sin(angle) * 250, life: 4, dmg: 1, r: 11 });
+          this.ebullets.push({ x: b.x + 36, y: b.y - 42, vx: Math.cos(angle) * 250, vy: Math.sin(angle) * 250, life: 4, dmg: 1, r: 11 });
+        }
+        sfx.rain(); return;
+      }
+      if (kind === "ring") {
+        // In its ball form the spikes retract and fire as a rotating radial burst.
+        const n = b.phase === 0 ? 20 : 16;
+        for (let i = 0; i < n; i++) {
+          const angle = b.t * 0.8 + i / n * TAU;
+          this.ebullets.push({ x: b.x, y: b.y, vx: Math.cos(angle) * (b.phase === 0 ? 220 : 285), vy: Math.sin(angle) * (b.phase === 0 ? 220 : 285), life: 3.6, dmg: 1, r: b.phase === 0 ? 8 : 6 });
+        }
+        sfx.enemyShot(); return;
+      }
+    }
     switch (kind) {
       case "diagonal":
         b.queenDash = { x1: b.x, y1: b.y, x2: b.targetX, y2: b.targetY, t: 0, duration: 0.58, hit: false };
@@ -3424,6 +3459,7 @@ export class Game {
         this.bossBanner = 0;
       }
     } else if (b.state === "transition") {
+      if (b.def.id === "mecha" && b.phase === 1) { b.x += (W / 2 - b.x) * Math.min(1, dt * 1.5); b.y += (156 - b.y) * Math.min(1, dt * 1.5); }
       b.stateT -= dt;
       if (b.stateT <= 0) {
         b.state = "fight";
@@ -3552,7 +3588,7 @@ export class Game {
         b.attackCd -= dt;
         const busy = !!b.sweep || b.lashes.length > 0 || !!b.emit || !!b.laser || !!b.leap || !!b.queenDash || !!b.queenSlash || b.charging > 0 || specialBusy(this);
         if (b.attackCd <= 0 && !busy) {
-          const list = b.def.phases[b.phase];
+          const list = b.def.phases[b.phase] ?? b.def.phases[b.def.phases.length - 1];
           const kind = list[b.attackIndex % list.length];
           b.attackIndex++;
           this.beginBossAttack(kind);
@@ -5330,7 +5366,6 @@ export class Game {
     ctx.strokeStyle = INK;
     ctx.fillStyle = INK;
     drawSpecialTop(this, boil);
-    drawVoid(this, boil);
     ctx.restore();
 
     if (this.boss?.def.id === "queen" && this.boss.state === "transition") {
@@ -6716,13 +6751,49 @@ export class Game {
     ctx.restore();
   }
 
-  drawBoss(boil: number) {
+  drawMechaBoss(boil: number) {
+    const b = this.boss!; const ctx = this.ctx; const t = this.time;
+    const phase = b.phase; const giant = phase > 0;
+    const palette = phase === 2 ? ["#00f5ff", "#ff35d3", "#ffe600"] : phase >= 3 ? ["#7cff54", "#ff4545", "#565cff"] : ["#27313d", "#b8c4ce", "#f4f1e8"];
+    ctx.save(); ctx.translate(b.x, b.y + Math.sin(t * 3) * (giant ? 3 : 7));
+    const emerge = phase === 1 && b.state === "transition" ? 0.22 + 0.78 * (1 - b.stateT / 3.4) : 1;
+    ctx.scale(1, Math.max(0.12, Math.min(1, emerge))); ctx.lineJoin = "round"; ctx.lineCap = "round";
+    if (!giant) {
+      ctx.rotate(t * 2.8); ctx.fillStyle = palette[0]; ctx.strokeStyle = palette[1]; ctx.lineWidth = 4;
+      for (let i=0;i<12;i++){const a=i*TAU/12;ctx.beginPath();ctx.moveTo(Math.cos(a)*16,Math.sin(a)*16);ctx.lineTo(Math.cos(a)*43,Math.sin(a)*43);ctx.lineTo(Math.cos(a+.16)*16,Math.sin(a+.16)*16);ctx.closePath();ctx.fill();ctx.stroke();}
+      ctx.beginPath();ctx.arc(0,0,25,0,TAU);ctx.fill();ctx.stroke();ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(0,0,7,0,TAU);ctx.fill();
+    } else {
+      ctx.fillStyle=palette[0];ctx.strokeStyle=palette[1];ctx.lineWidth=5;
+      for(const side of [-1,1]){ctx.save();ctx.translate(side*76,-5);ctx.fillRect(-26,-58,52,104);ctx.strokeRect(-26,-58,52,104);ctx.fillStyle=palette[2];for(let k=0;k<3;k++)ctx.fillRect(-18+k*13,-48,8,31);ctx.fillStyle=palette[0];ctx.fillRect(-17,44,34,74);ctx.strokeRect(-17,44,34,74);ctx.restore();}
+      ctx.beginPath();ctx.moveTo(-65,-58);ctx.lineTo(-44,-104);ctx.lineTo(44,-104);ctx.lineTo(65,-58);ctx.lineTo(55,57);ctx.lineTo(-55,57);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle=palette[1];ctx.fillRect(-38,-48,76,38);ctx.strokeRect(-38,-48,76,38);ctx.fillStyle="#fff";ctx.fillRect(-21,-37,13,9);ctx.fillRect(8,-37,13,9);
+      ctx.fillStyle=palette[2];ctx.fillRect(-18,8,36,12);
+      for(let k=0;k<4;k++){ctx.fillRect(-103+k*14,-91,9,30);ctx.fillRect(83+k*7,-30,6,30);}
+      ctx.fillStyle=palette[1];ctx.fillRect(69,7,69,34);ctx.strokeRect(69,7,69,34);ctx.fillStyle="#10131a";ctx.fillRect(127,14,20,20);
+      if(phase>=2){ctx.globalAlpha=.7;ctx.strokeStyle=palette[2];ctx.lineWidth=3;for(let k=0;k<5;k++){ctx.beginPath();ctx.arc(0,0,112+k*9+t*3%8,0,TAU);ctx.stroke();}}
+    }
+    if (phase === 4) {
+      // Final phase: the arena becomes a floating desktop notebook window.
+      ctx.save(); ctx.translate(0, 154); ctx.fillStyle="#f4f0e5";ctx.strokeStyle="#141414";ctx.lineWidth=4;
+      ctx.fillRect(-150,-55,300,112);ctx.strokeRect(-150,-55,300,112);ctx.fillStyle="#27313d";ctx.fillRect(-150,-55,300,18);
+      ctx.fillStyle="#fff";ctx.font='bold 10px monospace';ctx.fillText("NOTEPAD.EXE  —  FINAL BATTLE", -136, -43);
+      ctx.fillStyle="#171717";ctx.font='12px monospace';ctx.fillText("> boss.exe is still running", -136, -16);ctx.fillText("> do not close this window_", -136, 4);
+      ctx.restore();
+    }
+
+  }
+
+    drawBoss(boil: number) {
     if (this.boss && isTent(this.boss)) {
       this.drawTentacleBoss(boil);
       return;
     }
     if (this.boss && this.boss.def.id === "queen") {
       this.drawQueenBoss(boil);
+      return;
+    }
+    if (this.boss && this.boss.def.id === "mecha") {
+      this.drawMechaBoss(boil);
       return;
     }
     const b = this.boss!;
@@ -7293,7 +7364,7 @@ export class Game {
       }
       ctx.restore();
       ctx.lineWidth = 2;
-      const phaseCount = boss.def.id === "queen" ? 2 : 3;
+      const phaseCount = boss.def.id === "queen" ? 2 : boss.def.phases.length;
       for (let i = 1; i < phaseCount; i++) wline(ctx, bx + (420 * i) / phaseCount, by, bx + (420 * i) / phaseCount, by + 22, r, 1.5);
       ctx.font = `bold 25px "Kelly Slab", serif`;
       ctx.fillText(boss.def.name, W / 2, by - 12);

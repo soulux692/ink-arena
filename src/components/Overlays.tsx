@@ -118,7 +118,7 @@ const BESTIARY: { kind: EnemyKind; name: string; desc: string }[] = [
   { kind: "shield", name: "ЩИТОНОСЕЦ", desc: "Спереди звенит щит. Обходи или бей рельсой." },
   { kind: "ghost", name: "ПРИЗРАК", desc: "Мигает: то твёрдый, то «фигушки»." },
 ];
-const BOSS_ORDER: BossId[] = ["tentacle", "matriarch", "queen", "octopus", "eye", "bombhead", "king"];
+const BOSS_ORDER: BossId[] = ["tentacle", "matriarch", "queen", "mecha", "octopus", "eye", "bombhead", "king"];
 
 export function Album({ s, onClose }: { s: PublicState; onClose: () => void }) {
   const [tab, setTab] = useState<"stickers" | "bestiary" | "ranks">("stickers");

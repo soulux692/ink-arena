@@ -37,7 +37,7 @@ const ease = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 
 export function isFinaleLevel(g: Game) {
-  return !g.endless && g.levelIndex === 5 && g.boss?.def.id === "king";
+  return !g.endless && g.levelIndex === 6 && g.boss?.def.id === "king";
 }
 
 /** called the moment the King's last HP is gone */
@@ -64,7 +64,6 @@ export function startFinale(g: Game) {
   g.flash = 0.12;
   g.shake = 22;
   g.freeze = 0.1;
-  g.addText(b.x, b.y - b.r - 34, "КОРОЛЬ ПОВЕРЖЕН?", 2.2, 1.7);
   sfx.bigBoom();
   // the king's kill still counts
   const m = g.meta;

@@ -14,7 +14,7 @@ export type EnemyKind =
   | "ghost"
   | "boss";
 
-export type BossId = "abyss" | "tentacle" | "matriarch" | "queen" | "octopus" | "eye" | "bombhead" | "king";
+export type BossId = "abyss" | "tentacle" | "matriarch" | "queen" | "mecha" | "octopus" | "eye" | "bombhead" | "king";
 
 export type AttackKind =
   | "lash" | "lash3" | "sweep" | "diagonal" | "slash" | "ring" | "spiral" | "aimed" | "rain" | "summon"
@@ -30,8 +30,8 @@ export interface BossDef {
   hp: number;
   r: number;
   /** attack sets for the three phases */
-  phases: [AttackKind[], AttackKind[], AttackKind[]];
-  phaseNames: [string, string, string];
+  phases: AttackKind[][];
+  phaseNames: string[];
   intro: string;
   tip: string;
   /** attack tempo multiplier (lower = faster) */
@@ -99,6 +99,13 @@ export const BOSSES: Record<BossId, BossDef> = {
     phaseNames: ["РАЗГОН", "ЧЕРНИЛЬНОЕ ПЕРЕРОЖДЕНИЕ", "РАЗРЕЗЫ ПОЛЯ"],
     intro: "Диагональный разгон ломает края листа. Смотри на линию предупреждения.",
     tip: "Рывок идёт по очерченной диагонали. В улье встань в белую соту с галочкой. Крест-накрест режет лист на четыре сектора.",
+  },
+  mecha: {
+    id: "mecha", name: "МЕХА-НУЛЬ", title: "колючее ядро пробуждает гигантскую машину", hp: 760, r: 24, pace: 0.88,
+    phases: [["ring", "aimed", "spiral", "ring"], ["laser", "rain", "charge", "aimed"], ["laser", "rain", "ring", "charge", "spiral"], ["mines", "laser", "rain", "charge", "ring"], ["laser", "rain", "charge", "mines", "spiral", "aimed"]],
+    phaseNames: ["КОЛЮЧИЙ ШАР", "ПОДЪЁМ МЕХА", "КИБЕРПЕРЕЗАГРУЗКА", "ПИКСЕЛЬНЫЙ СБОЙ", "ПОСЛЕДНИЙ ФАЙЛ"],
+    intro: "Маленький шар катится по арене. Не дай колючкам загнать себя в угол.",
+    tip: "Уклоняйся от конусного луча и ракет. На каждой фазе меняются атаки и сам мир.",
   },
   octopus: {
     id: "octopus",
@@ -227,6 +234,17 @@ export const LEVELS: LevelDef[] = [
   },
   {
     id: 3,
+    name: "ПРОБУЖДЕНИЕ МЕХИ",
+    subtitle: "Колючий шар зовёт машину из-под земли",
+    weapon: "smg", weaponNote: "Автомат · шквал мелких капель",
+    waves: 4, diff: 2, base: 14, perWave: 7,
+    pool: { blob: 5, fly: 6, spiky: 5, shooter: 7, zipper: 5, ghost: 3 },
+    boss: "mecha",
+    obstacles: [[182, 294, 22], [354, 112, 23], [354, 488, 23], [606, 112, 23], [606, 488, 23], [778, 294, 22]],
+    tip: "Сначала уничтожь колючий шар. Потом уклоняйся от конусного луча и ракет меха.", parTime: 125,
+  },
+  {
+    id: 4,
     name: "ЛИНОВАННЫЙ ТИР",
     subtitle: "Кляксы научились стрелять",
     weapon: "smg",
@@ -249,7 +267,7 @@ export const LEVELS: LevelDef[] = [
     parTime: 110,
   },
   {
-    id: 4,
+    id: 5,
     name: "ОХОТА НА СТРЕЛКОВ",
     subtitle: "Снайперы-карандаши держат тебя на мушке",
     weapon: "rail",
@@ -270,7 +288,7 @@ export const LEVELS: LevelDef[] = [
     parTime: 140,
   },
   {
-    id: 5,
+    id: 6,
     name: "ТЯЖЁЛЫЕ ПЯТНА",
     subtitle: "Громилы и бомберы идут напролом",
     weapon: "rocket",
@@ -291,7 +309,7 @@ export const LEVELS: LevelDef[] = [
     parTime: 160,
   },
   {
-    id: 6,
+    id: 7,
     name: "ЧЕРНИЛЬНЫЙ ФИНАЛ",
     subtitle: "Вся тетрадь против тебя",
     weapon: "smg",
