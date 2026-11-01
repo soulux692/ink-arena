@@ -2769,6 +2769,32 @@ export class Game {
     }
     for (let i = 0; i < 90; i++) this.drop(b.x, b.y, 220 + Math.random() * 520);
     this.shock(b.x, b.y, 30, 1500, 1);
+    // New 2.0 destruction signature: a hand-inked implosion followed by a paper-shard burst.
+    for (let i = 0; i < 5; i++) {
+      this.shock(b.x, b.y, b.r * (0.35 + i * 0.18), 1180 - i * 125, 0.75 + i * 0.08);
+    }
+    for (let i = 0; i < 34; i++) {
+      const a = (i / 34) * TAU + (Math.random() - 0.5) * 0.16;
+      const speed = 260 + Math.random() * 560;
+      this.particles.push({
+        x: b.x + Math.cos(a) * b.r * 0.25,
+        y: b.y + Math.sin(a) * b.r * 0.25,
+        vx: Math.cos(a) * speed,
+        vy: Math.sin(a) * speed - 90,
+        life: 0.7 + Math.random() * 0.85,
+        max: 1.55,
+        size: 3 + Math.random() * 9,
+        kind: i % 3 === 0 ? "shard" : "debris",
+        rot: Math.random() * TAU,
+      });
+    }
+    for (let i = 0; i < 18; i++) {
+      const a = (i / 18) * TAU;
+      const d = b.r + 24 + Math.random() * 88;
+      const x = Math.max(24, Math.min(W - 24, b.x + Math.cos(a) * d));
+      const y = Math.max(24, Math.min(H - 24, b.y + Math.sin(a) * d));
+      this.stains.push({ x, y, size: 5 + Math.random() * 13, seed: Math.random() * 1e6, born: this.time });
+    }
     this.edgeSplat(4, 44);
     this.explode(b.x, b.y, 150, 0, 0, true, true);
     for (let i = 0; i < 3; i++) {

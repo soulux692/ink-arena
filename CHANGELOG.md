@@ -1,7 +1,10 @@
-## 1.3.3
+# Changelog
 
-- Update checks now time out after 20 seconds if GitHub Releases does not respond, instead of leaving the main-menu button or startup screen stuck indefinitely.
-- The timeout reports a connection error and allows the player to continue using the installed version.
+## 2.0.0 — Global Notebook Update
+
+- Increased the health of the first three campaign bosses by 50%: Tentacle Lord 135 HP, Swarm Queen 195 HP, Ink Octopus 263 HP.
+- Added a new boss destruction sequence with an ink implosion, expanding shock rings, scattered paper fragments and fresh ink splashes.
+- Refreshed the main menu with a ruled notebook page, edition masthead and revised paper-like framing.
 
 ## 1.3.3
 
