@@ -720,7 +720,7 @@ export default function App() {
         {state.trans && <Curtain key={state.trans.id} {...state.trans} />}
       </div>
 
-      <VoidPanel open={state.pageCut} />
+      <VoidPanel open={state.pageCut && !window.inkDesktop?.setDesktopTear} />
       {cutFx && <CutFx key={cutFx.id} id={cutFx.id} tearing={cutFx.tearing} />}
 
       {queenFx && (
