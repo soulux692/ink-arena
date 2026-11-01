@@ -133,6 +133,14 @@ export default function App() {
   };
 
   useEffect(() => {
+    // Never leave the "checking GitHub" toast stuck on screen.
+    if (toast && /проверяем.*(обновлен|github)/i.test(toast)) {
+      const timeout = window.setTimeout(() => setToast((current) => current === toast ? null : current), 20000);
+      return () => window.clearTimeout(timeout);
+    }
+  }, [toast]);
+
+  useEffect(() => {
     window.inkDesktop?.onUpdateStatus?.((data) => {
       if (!data) return;
       if (data.stage === "checking") setToast("Проверяем наличие обновлений...");
