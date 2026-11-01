@@ -3,7 +3,6 @@ import type { PublicState } from "../game/engine";
 import { LEVELS, BOSSES, ENDLESS, isUnlocked } from "../game/levels";
 import { BossDoodle, EnemyDoodle, PencilPal } from "./Doodles";
 import { Bar, Btn, Cap, Card, Chip, Disp, Icon, Num, Rule, Stamp, Stars, ix, useCountUp } from "./ui";
-import { useCoarsePointer } from "../utils/device";
 
 const WEAPON: Record<string, { short: string; name: string }> = {
   pistol: { short: "ПМ", name: "ручка-пистолет" },
@@ -56,7 +55,6 @@ export function MainMenu({ s, onPlay, onLevels, onAlbum, onEndless, onSettings, 
   const cleared = s.progress.filter((r) => r.cleared).length;
   const firstOpen = s.progress.findIndex((r) => !r.cleared);
   const resume = firstOpen === -1 ? LEVELS.length - 1 : firstOpen;
-  const touchMode = useCoarsePointer();
   return (
     <div className="screen menu menu-revision menu-concept">
       <section className="menu-concept-left">
