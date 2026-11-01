@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.3.4 — Restore original main menu
+
+- Restored the previous main menu unchanged; boss art and boss health remain in the battle only.
+- Kept the torn-paper red boss health bar in the in-game HUD.
+- Kept the hand-inked Mecha redesign in the boss fight, not on the menu.
+
 ## 2.3.3 — Ink Arena concept art direction
 
 - Rebuilt the main menu as a dark ink-covered notebook spread with an English title, stark white buttons, illustrated Mecha hero art and phase previews.
