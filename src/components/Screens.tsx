@@ -135,7 +135,7 @@ function LevelDetail({ s, index, big = false, onPlay, onBack }: { s: PublicState
   const cleared = s.progress.filter((r) => r.cleared).length;
   const open = endless ? cleared >= 3 || s.settings.freePlay : isUnlocked(s.progress, index, s.settings.freePlay);
   const roster = Object.entries(lv.pool).sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0)).slice(0, big ? 9 : 6).map(([k]) => k);
-  const phases = boss ? (boss.id === "queen" ? [0, 2] : [0, 1, 2]) : [];
+  const phases = boss ? (boss.id === "queen" ? [0, 2] : boss.phaseNames.map((_, i) => i)) : [];
   return (
     <div className={`detail ${big ? "detail-big" : ""}`} key={index}>
       <Card ink className="detail-boss rise">
