@@ -5330,7 +5330,6 @@ export class Game {
     ctx.strokeStyle = INK;
     ctx.fillStyle = INK;
     drawSpecialTop(this, boil);
-    drawVoid(this, boil);
     ctx.restore();
 
     if (this.boss?.def.id === "queen" && this.boss.state === "transition") {
