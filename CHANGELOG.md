@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.1.0 — Effects & Cleanup Update
+
+- Added distinct death bursts for flying, bomber, splitter and brute enemies, with extra FX automatically reduced on lower quality settings.
+- Added hard caps for shock rings and kill bursts to stop effects accumulating during long sessions.
+- Clear both live and baked ink stains when a level ends, preventing old enemy trails from remaining on the victory page.
+- Reworked update-status toast handling so a stalled GitHub check hides its "checking" message after 20 seconds.
+
+# Changelog
+
 ## 2.0.0 — Global Notebook Update
 
 - Increased the health of the first three campaign bosses by 50%: Tentacle Lord 135 HP, Swarm Queen 195 HP, Ink Octopus 263 HP.

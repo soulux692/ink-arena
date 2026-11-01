@@ -1257,3 +1257,45 @@ html.desktop-tear .app.is-cut .ui {
   .menu-revision::after { display: none; }
   .menu-revision .menu-left { padding-left: 0; }
 }
+
+/* ---------- 2.1.0: clearer notebook UI hierarchy ---------- */
+.screen.menu-revision {
+  background:
+    radial-gradient(ellipse at 78% 18%, rgba(20,20,20,.055), transparent 36%),
+    linear-gradient(90deg, transparent 0 3.15em, rgba(169,55,48,.24) 3.15em 3.28em, transparent 3.28em),
+    repeating-linear-gradient(180deg, transparent 0 2.18em, rgba(50,91,122,.13) 2.18em 2.25em),
+    #f4efdf;
+}
+.menu-revision .menu-title {
+  letter-spacing: -.045em;
+  line-height: .86;
+  transform: rotate(-1.2deg);
+}
+.menu-revision .menu-left { gap: .72em; }
+.menu-revision .menu-edition {
+  background: rgba(255,255,255,.44);
+  border-width: .16em;
+  box-shadow: .18em .2em 0 rgba(20,20,20,.72);
+  transform: rotate(.5deg);
+}
+.menu-revision .menu-nav .btn {
+  min-height: 2.8em;
+  transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
+}
+.menu-revision .menu-nav .btn:hover:not(:disabled) {
+  transform: translate(-.12em,-.12em) rotate(-.3deg);
+  box-shadow: .28em .3em 0 var(--ink);
+}
+.menu-revision .menu-right .card {
+  background-image: repeating-linear-gradient(180deg, transparent 0 1.85em, rgba(43,82,112,.075) 1.85em 1.92em);
+}
+.menu-revision .menu-rule {
+  padding: .35em 0;
+  border-bottom: 1px dashed rgba(20,20,20,.4);
+}
+.menu-revision .menu-drips { opacity: .82; }
+@media (max-width: 700px) {
+  .menu-revision .menu-left { gap: .5em; }
+  .menu-revision .menu-nav { gap: .55em; }
+  .menu-revision .menu-nav .btn { min-height: 2.65em; }
+}
