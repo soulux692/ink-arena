@@ -1423,8 +1423,8 @@ html.desktop-tear .app.is-cut .ui {
 
 
 /* Mecha boss world transformations */
-.mecha-cyber .stage { filter: saturate(2.2) hue-rotate(95deg) contrast(1.08); }
-.mecha-pixel .stage { filter: saturate(2.3) contrast(1.25); image-rendering: pixelated; }
+.mecha-cyber .stage { filter: saturate(1.25) contrast(1.06); }
+.mecha-pixel .stage { filter: saturate(1.35) contrast(1.2); image-rendering: pixelated; }
 .mecha-pixel .stage::after { content:""; position:absolute; inset:0; pointer-events:none; z-index:80; opacity:.18; background: repeating-linear-gradient(0deg, transparent 0 5px, rgba(0,0,0,.55) 5px 6px), repeating-linear-gradient(90deg, transparent 0 5px, rgba(0,0,0,.35) 5px 6px); }
 .mecha-notepad .stage { filter: saturate(1.4) contrast(1.08); }
 .mecha-notepad-window { position:absolute; z-index:85; left:50%; top:13%; width:min(520px,72%); transform:translateX(-50%) rotate(-1deg); padding:0 18px 14px; color:#1b1b1b; background:#f7f7f7; border:2px solid #343434; box-shadow:12px 14px 0 rgba(0,0,0,.45); font:14px/1.7 Consolas,monospace; pointer-events:none; }
