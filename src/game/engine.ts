@@ -2650,7 +2650,8 @@ export class Game {
     b.phase = next;
     clearSpecial(this);
     b.state = "transition";
-    b.stateT = b.def.id === "queen" ? 2.6 : 1.6;
+    b.stateT = b.def.id === "queen" ? 2.6 : b.def.id === "mecha" && next === 1 ? 3.4 : 1.6;
+    if (b.def.id === "mecha") { b.r = next === 0 ? 24 : 88; b.attackCd = 1.6; }
     b.attack = null;
     b.telegraph = 0;
     b.emit = null;
@@ -3292,6 +3293,35 @@ export class Game {
       return;
     }
     const speed = 165 + b.phase * 20;
+    if (b.def.id === "mecha") {
+      if (kind === "laser") {
+        const base = Math.atan2(p.y - b.y, p.x - b.x);
+        // Broad five-lane cone: warning is the boss' glowing cannon arm.
+        for (let i = -3; i <= 3; i++) {
+          const angle = base + i * (b.phase >= 3 ? 0.105 : 0.16);
+          this.ebullets.push({ x: b.x, y: b.y, vx: Math.cos(angle) * 350, vy: Math.sin(angle) * 350, life: 3.2, dmg: 1, r: 7 });
+        }
+        this.shake = 15; sfx.laserFire(); return;
+      }
+      if (kind === "rain") {
+        // Twin back racks launch a staggered homing-looking rocket fan.
+        for (let i = -2; i <= 2; i++) {
+          const angle = Math.atan2(p.y - b.y, p.x - b.x) + i * 0.19;
+          this.ebullets.push({ x: b.x - 36, y: b.y - 42, vx: Math.cos(angle) * 250, vy: Math.sin(angle) * 250, life: 4, dmg: 1, r: 11 });
+          this.ebullets.push({ x: b.x + 36, y: b.y - 42, vx: Math.cos(angle) * 250, vy: Math.sin(angle) * 250, life: 4, dmg: 1, r: 11 });
+        }
+        sfx.rain(); return;
+      }
+      if (kind === "ring") {
+        // In its ball form the spikes retract and fire as a rotating radial burst.
+        const n = b.phase === 0 ? 20 : 16;
+        for (let i = 0; i < n; i++) {
+          const angle = b.t * 0.8 + i / n * TAU;
+          this.ebullets.push({ x: b.x, y: b.y, vx: Math.cos(angle) * (b.phase === 0 ? 220 : 285), vy: Math.sin(angle) * (b.phase === 0 ? 220 : 285), life: 3.6, dmg: 1, r: b.phase === 0 ? 8 : 6 });
+        }
+        sfx.enemyShot(); return;
+      }
+    }
     switch (kind) {
       case "diagonal":
         b.queenDash = { x1: b.x, y1: b.y, x2: b.targetX, y2: b.targetY, t: 0, duration: 0.58, hit: false };
@@ -6735,8 +6765,15 @@ export class Game {
       ctx.fillStyle=palette[1];ctx.fillRect(69,7,69,34);ctx.strokeRect(69,7,69,34);ctx.fillStyle="#10131a";ctx.fillRect(127,14,20,20);
       if(phase>=2){ctx.globalAlpha=.7;ctx.strokeStyle=palette[2];ctx.lineWidth=3;for(let k=0;k<5;k++){ctx.beginPath();ctx.arc(0,0,112+k*9+t*3%8,0,TAU);ctx.stroke();}}
     }
-    if(b.flash>0){ctx.globalAlpha=.7;ctx.strokeStyle="#fff";ctx.lineWidth=7;ctx.beginPath();ctx.arc(0,0,b.r+20,0,TAU);ctx.stroke();}
-    ctx.restore();
+    if (phase === 4) {
+      // Final phase: the arena becomes a floating desktop notebook window.
+      ctx.save(); ctx.translate(0, 154); ctx.fillStyle="#f4f0e5";ctx.strokeStyle="#141414";ctx.lineWidth=4;
+      ctx.fillRect(-150,-55,300,112);ctx.strokeRect(-150,-55,300,112);ctx.fillStyle="#27313d";ctx.fillRect(-150,-55,300,18);
+      ctx.fillStyle="#fff";ctx.font='bold 10px monospace';ctx.fillText("NOTEPAD.EXE  —  FINAL BATTLE", -136, -43);
+      ctx.fillStyle="#171717";ctx.font='12px monospace';ctx.fillText("> boss.exe is still running", -136, -16);ctx.fillText("> do not close this window_", -136, 4);
+      ctx.restore();
+    }
+
   }
 
     drawBoss(boil: number) {
