@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.3.1 — Mecha visibility fix
+
+- Fixed the Mecha renderer leaking its canvas transform, which could shift the player and make them disappear during the boss fight.
+
+
 ## 2.3.0 — Mecha Finale
 
 - Added the five-phase Mecha boss immediately after the Queen of the Swarm.

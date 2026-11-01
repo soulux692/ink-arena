@@ -6780,9 +6780,8 @@ export class Game {
       ctx.fillStyle="#171717";ctx.font='12px monospace';ctx.fillText("> boss.exe is still running", -136, -16);ctx.fillText("> do not close this window_", -136, 4);
       ctx.restore();
     }
-
+    ctx.restore(); // Restore canvas before drawing the player and arena.
   }
-
     drawBoss(boil: number) {
     if (this.boss && isTent(this.boss)) {
       this.drawTentacleBoss(boil);
