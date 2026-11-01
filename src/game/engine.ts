@@ -4539,11 +4539,40 @@ export class Game {
         }
       } else if (e.kind === "brute") {
         this.shocks.push({ x: e.x, y: e.y, r: e.r * 0.25, vr: 300, life: 0.4, max: 0.4, w: 3 });
+      } else if (e.kind === "spiky") {
+        // A thorn burst: short radial needles and a tight impact ring.
+        this.shocks.push({ x: e.x, y: e.y, r: 3, vr: 360, life: 0.28, max: 0.28, w: 2 });
+        for (let i = 0; i < fxCount; i++) {
+          const a = (i / fxCount) * TAU;
+          this.particles.push({ x: e.x, y: e.y, vx: Math.cos(a) * 260, vy: Math.sin(a) * 260, life: 0.2, max: 0.2, size: 12, kind: "dash", rot: a });
+        }
+      } else if (e.kind === "zipper") {
+        // Zippers snap apart in two crossing ink strokes.
+        for (const a of [Math.PI * 0.25, Math.PI * 0.75]) {
+          this.beams.push({ x1: e.x - Math.cos(a) * 28, y1: e.y - Math.sin(a) * 28, x2: e.x + Math.cos(a) * 28, y2: e.y + Math.sin(a) * 28, life: 0.22, max: 0.22 });
+        }
+      } else if (e.kind === "sniper" || e.kind === "shooter") {
+        // A long, thin muzzle-like flash marks the ranged enemy's last shot.
+        this.shocks.push({ x: e.x, y: e.y, r: e.r * 0.4, vr: 190, life: 0.5, max: 0.5, w: 1.4 });
+        for (let i = 0; i < fxCount; i++) {
+          const a = (i / fxCount) * TAU;
+          this.particles.push({ x: e.x, y: e.y, vx: Math.cos(a) * 90, vy: Math.sin(a) * 90, life: 0.3, max: 0.3, size: 2, kind: "shard", rot: a });
+        }
+      } else if (e.kind === "shield") {
+        // Shield enemies leave a layered, cracked-paper collapse.
+        this.shocks.push({ x: e.x, y: e.y, r: 6, vr: 250, life: 0.5, max: 0.5, w: 4 });
+        this.shocks.push({ x: e.x, y: e.y, r: 18, vr: 170, life: 0.42, max: 0.42, w: 1.5 });
+      } else if (e.kind === "ghost" || e.kind === "blob") {
+        // Soft enemies melt into a little ink blossom instead of a generic pop.
+        this.petals.push({ x: e.x, y: e.y, life: 0.62, max: 0.62, seed: Math.random() * 1e6, n: e.kind === "ghost" ? 6 : 8 });
       }
     }
     // Hard caps protect long runs from accumulated short-lived effects.
     if (this.shocks.length > 90) this.shocks.splice(0, this.shocks.length - 90);
     if (this.bursts.length > 55) this.bursts.splice(0, this.bursts.length - 55);
+    if (this.shocks.length > 90) this.shocks.splice(0, this.shocks.length - 90);
+    if (this.beams.length > 80) this.beams.splice(0, this.beams.length - 80);
+    if (this.petals.length > 36) this.petals.splice(0, this.petals.length - 36);
     this.shake = Math.max(this.shake, big ? 18 : e.kind === "fly" ? 2 : 5);
     this.freeze = Math.max(this.freeze, big ? 0.08 : 0.028);
     this.addText(

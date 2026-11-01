@@ -1299,3 +1299,124 @@ html.desktop-tear .app.is-cut .ui {
   .menu-revision .menu-nav { gap: .55em; }
   .menu-revision .menu-nav .btn { min-height: 2.65em; }
 }
+
+
+/* ---------- 2.2.0: full notebook redesign ---------- */
+.screen.menu-revision {
+  --menu-rule: rgba(48, 82, 111, .19);
+  overflow: hidden;
+  padding: 2.15em 2.6em 2.4em 4.4em;
+  background:
+    radial-gradient(ellipse at 78% 12%, rgba(20,20,20,.09), transparent 32%),
+    linear-gradient(90deg, transparent 0 3.1em, rgba(166,55,48,.32) 3.1em 3.22em, transparent 3.22em),
+    repeating-linear-gradient(180deg, transparent 0 2.32em, var(--menu-rule) 2.32em 2.39em),
+    #f5f0df;
+}
+.menu-revision::before {
+  inset: .55em .7em;
+  border: 2px solid rgba(20,20,20,.55);
+  border-radius: .12em;
+  background:
+    radial-gradient(circle at .55em 2.4em, #b9b09b 0 .23em, transparent .27em),
+    radial-gradient(circle at .55em 50%, #b9b09b 0 .23em, transparent .27em),
+    radial-gradient(circle at .55em calc(100% - 2.4em), #b9b09b 0 .23em, transparent .27em);
+}
+.menu-revision::after {
+  content: "INK ARENA  •  FIELD NOTES  •  VOL. 02";
+  right: 2.2em;
+  bottom: 1.05em;
+  letter-spacing: .28em;
+  font-size: .62em;
+}
+.menu-revision .menu-left { gap: .82em; }
+.menu-revision .menu-title {
+  font-size: clamp(3.6em, 5.8vw, 5.4em);
+  line-height: .82;
+  letter-spacing: -.065em;
+  transform: rotate(-1.8deg);
+  margin: .12em 0 .2em -.08em;
+}
+.menu-revision .menu-title .mk {
+  margin-left: .62em;
+  padding: .03em .12em .08em;
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: .12em .14em 0 rgba(20,20,20,.22);
+}
+.menu-revision .menu-title .mk::after { display: none; }
+.menu-revision .menu-edition {
+  width: min(29em, 100%);
+  padding: .52em .8em;
+  background: rgba(255,255,255,.56);
+  border: 2px solid var(--ink);
+  box-shadow: .24em .24em 0 var(--ink);
+  transform: rotate(.8deg);
+}
+.menu-revision .menu-rule {
+  width: min(29em, 100%);
+  padding: .48em .1em;
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px dashed rgba(20,20,20,.6);
+}
+.menu-revision .menu-tag,
+.menu-revision .menu-ctl {
+  max-width: 30em;
+  padding: .38em .65em;
+  background: rgba(255,255,255,.52);
+  border-left: .22em solid var(--ink);
+  line-height: 1.3;
+}
+.menu-revision .menu-nav {
+  width: min(27em, 100%);
+  gap: .62em;
+  margin-top: .55em;
+}
+.menu-revision .menu-nav .btn {
+  min-height: 2.95em;
+  border: 2px solid var(--ink);
+  border-radius: .12em .42em .12em .42em;
+  box-shadow: .24em .26em 0 var(--ink);
+  background-color: rgba(255,255,255,.72);
+}
+.menu-revision .menu-nav .btn:nth-child(even) { margin-left: 1.1em; width: calc(100% - 1.1em); }
+.menu-revision .menu-nav .btn:hover:not(:disabled) {
+  transform: translate(.08em,.08em) rotate(-.25deg);
+  box-shadow: .12em .14em 0 var(--ink);
+}
+.menu-revision .menu-nav .btn-solid {
+  background: var(--ink);
+  color: var(--paper);
+}
+.menu-revision .menu-right {
+  width: min(23em, 36%);
+  gap: 1.35em;
+}
+.menu-revision .menu-right .card {
+  border: 2px solid var(--ink);
+  border-radius: .12em .48em .12em .35em;
+  box-shadow: .3em .34em 0 var(--ink);
+  background-color: rgba(255,255,255,.78);
+  background-image:
+    repeating-linear-gradient(180deg, transparent 0 1.8em, rgba(48,82,111,.12) 1.8em 1.88em);
+}
+.menu-revision .menu-right .rank { transform: rotate(1.1deg); }
+.menu-revision .menu-right .prog { transform: rotate(-.8deg); }
+.menu-revision .menu-right .pal { transform: rotate(1.4deg); }
+.menu-revision .menu-drips { width: 22em; height: 2.8em; }
+@media (max-width: 900px) {
+  .screen.menu-revision { padding: 1.2em 1.4em 2em 3.6em; }
+  .menu-revision .menu-right { width: 31%; }
+  .menu-revision .menu-title { font-size: 3.5em; }
+}
+@media (max-width: 700px) {
+  .screen.menu-revision { padding: 1em 1em 1.8em 2.7em; }
+  .menu-revision .menu-right { width: 28%; }
+  .menu-revision .menu-right .pal { display: none; }
+  .menu-revision .menu-nav .btn { min-height: 2.55em; }
+}
+@media (max-width: 560px) and (orientation: portrait) {
+  .screen.menu-revision { padding: .8em .9em 1.5em 2.3em; }
+  .menu-revision .menu-right { width: 100%; flex-direction: row; }
+  .menu-revision .menu-title { font-size: 3em; }
+  .menu-revision .menu-nav { width: 100%; }
+}
