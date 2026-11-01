@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.3.3 — Ink Arena concept art direction
+
+- Rebuilt the main menu as a dark ink-covered notebook spread with an English title, stark white buttons, illustrated Mecha hero art and phase previews.
+- Replaced the boss health bar with a torn-paper frame, red ink fill, phase cuts and a boss seal.
+- Redrew Mecha as a black hand-inked monster with chalk-white scratches and phase-specific restrained color accents; removed polished metallic shading.
+
 ## 2.3.2 — Mecha visual overhaul
 
 - Rebuilt the Mecha boss as a detailed armored machine with articulated limbs, animated joints, layered armor, reactor, visor and mechanical weaponry.
