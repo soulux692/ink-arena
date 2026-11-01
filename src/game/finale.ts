@@ -64,7 +64,6 @@ export function startFinale(g: Game) {
   g.flash = 0.12;
   g.shake = 22;
   g.freeze = 0.1;
-  g.addText(b.x, b.y - b.r - 34, "КОРОЛЬ ПОВЕРЖЕН?", 2.2, 1.7);
   sfx.bigBoom();
   // the king's kill still counts
   const m = g.meta;
