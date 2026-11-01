@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.2.0 — Full Notebook & Effects Update
+
+- Rebuilt the main menu as a full notebook spread: larger hand-inked title, stamped edition header, ruled paper, bold chapter buttons and tilted dossier cards.
+- Added distinct defeat signatures for spiky, zipper, ranged, shield, ghost and blob enemies, alongside the existing flyer, bomber, splitter and brute effects.
+- Added short-lived flower, crack, shard and layered shock effects with strict caps to keep busy waves responsive.
+- Kept victory cleanup for live and baked ink stains, and bounded the visual-effect queues to prevent long-session buildup.
+- Refined the notebook layout at desktop, tablet and phone breakpoints.
+
 ## 2.1.0 — Effects & Cleanup Update
 
 - Added distinct death bursts for flying, bomber, splitter and brute enemies, with extra FX automatically reduced on lower quality settings.
