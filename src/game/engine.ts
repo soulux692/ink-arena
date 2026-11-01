@@ -2640,8 +2640,9 @@ export class Game {
       if (b.phase === 0 && b.hp <= b.maxHp * 0.5) this.bossPhaseChange(2);
       return;
     }
-    const threshold = b.maxHp * (b.phase === 0 ? 0.66 : 0.33);
-    if (b.phase < 2 && b.hp <= threshold) this.bossPhaseChange(b.phase + 1);
+    const phaseCount = b.def.phases.length;
+    const threshold = b.maxHp * (1 - (b.phase + 1) / phaseCount);
+    if (b.phase < phaseCount - 1 && b.hp <= threshold) this.bossPhaseChange(b.phase + 1);
   }
 
   bossPhaseChange(next: number) {
@@ -3552,7 +3553,7 @@ export class Game {
         b.attackCd -= dt;
         const busy = !!b.sweep || b.lashes.length > 0 || !!b.emit || !!b.laser || !!b.leap || !!b.queenDash || !!b.queenSlash || b.charging > 0 || specialBusy(this);
         if (b.attackCd <= 0 && !busy) {
-          const list = b.def.phases[b.phase];
+          const list = b.def.phases[b.phase] ?? b.def.phases[b.def.phases.length - 1];
           const kind = list[b.attackIndex % list.length];
           b.attackIndex++;
           this.beginBossAttack(kind);
@@ -6715,13 +6716,40 @@ export class Game {
     ctx.restore();
   }
 
-  drawBoss(boil: number) {
+  drawMechaBoss(boil: number) {
+    const b = this.boss!; const ctx = this.ctx; const t = this.time;
+    const phase = b.phase; const giant = phase > 0;
+    const palette = phase === 2 ? ["#00f5ff", "#ff35d3", "#ffe600"] : phase >= 3 ? ["#7cff54", "#ff4545", "#565cff"] : ["#27313d", "#b8c4ce", "#f4f1e8"];
+    ctx.save(); ctx.translate(b.x, b.y + Math.sin(t * 3) * (giant ? 3 : 7)); ctx.lineJoin = "round"; ctx.lineCap = "round";
+    if (!giant) {
+      ctx.rotate(t * 2.8); ctx.fillStyle = palette[0]; ctx.strokeStyle = palette[1]; ctx.lineWidth = 4;
+      for (let i=0;i<12;i++){const a=i*TAU/12;ctx.beginPath();ctx.moveTo(Math.cos(a)*16,Math.sin(a)*16);ctx.lineTo(Math.cos(a)*43,Math.sin(a)*43);ctx.lineTo(Math.cos(a+.16)*16,Math.sin(a+.16)*16);ctx.closePath();ctx.fill();ctx.stroke();}
+      ctx.beginPath();ctx.arc(0,0,25,0,TAU);ctx.fill();ctx.stroke();ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(0,0,7,0,TAU);ctx.fill();
+    } else {
+      ctx.fillStyle=palette[0];ctx.strokeStyle=palette[1];ctx.lineWidth=5;
+      for(const side of [-1,1]){ctx.save();ctx.translate(side*76,-5);ctx.fillRect(-26,-58,52,104);ctx.strokeRect(-26,-58,52,104);ctx.fillStyle=palette[2];for(let k=0;k<3;k++)ctx.fillRect(-18+k*13,-48,8,31);ctx.fillStyle=palette[0];ctx.fillRect(-17,44,34,74);ctx.strokeRect(-17,44,34,74);ctx.restore();}
+      ctx.beginPath();ctx.moveTo(-65,-58);ctx.lineTo(-44,-104);ctx.lineTo(44,-104);ctx.lineTo(65,-58);ctx.lineTo(55,57);ctx.lineTo(-55,57);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle=palette[1];ctx.fillRect(-38,-48,76,38);ctx.strokeRect(-38,-48,76,38);ctx.fillStyle="#fff";ctx.fillRect(-21,-37,13,9);ctx.fillRect(8,-37,13,9);
+      ctx.fillStyle=palette[2];ctx.fillRect(-18,8,36,12);
+      for(let k=0;k<4;k++){ctx.fillRect(-103+k*14,-91,9,30);ctx.fillRect(83+k*7,-30,6,30);}
+      ctx.fillStyle=palette[1];ctx.fillRect(69,7,69,34);ctx.strokeRect(69,7,69,34);ctx.fillStyle="#10131a";ctx.fillRect(127,14,20,20);
+      if(phase>=2){ctx.globalAlpha=.7;ctx.strokeStyle=palette[2];ctx.lineWidth=3;for(let k=0;k<5;k++){ctx.beginPath();ctx.arc(0,0,112+k*9+t*3%8,0,TAU);ctx.stroke();}}
+    }
+    if(b.flash>0){ctx.globalAlpha=.7;ctx.strokeStyle="#fff";ctx.lineWidth=7;ctx.beginPath();ctx.arc(0,0,b.r+20,0,TAU);ctx.stroke();}
+    ctx.restore();
+  }
+
+    drawBoss(boil: number) {
     if (this.boss && isTent(this.boss)) {
       this.drawTentacleBoss(boil);
       return;
     }
     if (this.boss && this.boss.def.id === "queen") {
       this.drawQueenBoss(boil);
+      return;
+    }
+    if (this.boss && this.boss.def.id === "mecha") {
+      this.drawMechaBoss(boil);
       return;
     }
     const b = this.boss!;
