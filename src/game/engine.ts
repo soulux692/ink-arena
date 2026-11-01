@@ -1162,6 +1162,12 @@ export class Game {
     this.shake = 16;
     sfx.streak();
     this.confetti(this.player.x, this.player.y - 10, 26);
+    // The baked stain canvas survives between frames; clear both live and baked ink
+    // when a sheet is completed so enemy trails cannot remain on the victory screen.
+    this.stains = [];
+    this._stains = [];
+    this.stainCtx?.clearRect(0, 0, W, H);
+    this.hudValid = false;
     this.emit();
   }
 
@@ -4510,6 +4516,34 @@ export class Game {
     const n = e.kind === "boss" ? 90 : big ? 32 : e.kind === "fly" ? 5 : 13;
     for (let i = 0; i < n; i++) this.drop(e.x, e.y, 160 + Math.random() * (big ? 380 : 200));
     this.shock(e.x, e.y, e.r * 0.6, big ? 520 : 240, big ? 0.7 : 0.4);
+    // Enemy-specific death signatures: a quick, readable visual cue for each archetype.
+    // Extra particles are intentionally quality-gated to avoid making crowded waves lag.
+    if (this.quality < 2 && e.kind !== "boss") {
+      const fxCount = this.quality === 0 ? 8 : 4;
+      if (e.kind === "fly") {
+        for (let i = 0; i < fxCount; i++) {
+          const a = (i / fxCount) * TAU;
+          this.particles.push({ x: e.x, y: e.y, vx: Math.cos(a) * 210, vy: Math.sin(a) * 210, life: 0.24, max: 0.24, size: 2.5, kind: "shard", rot: a });
+        }
+      } else if (e.kind === "bomber") {
+        this.shocks.push({ x: e.x, y: e.y, r: 4, vr: 440, life: 0.32, max: 0.32, w: 2.5 });
+        for (let i = 0; i < fxCount; i++) {
+          const a = (i / fxCount) * TAU + Math.random() * 0.2;
+          const sp = 130 + Math.random() * 100;
+          this.particles.push({ x: e.x, y: e.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.35, max: 0.35, size: 3 + Math.random() * 2, kind: "ember", rot: a });
+        }
+      } else if (e.kind === "splitter") {
+        for (let i = 0; i < fxCount; i++) {
+          const a = (i / fxCount) * TAU;
+          this.particles.push({ x: e.x, y: e.y, vx: Math.cos(a) * 105, vy: Math.sin(a) * 105, life: 0.42, max: 0.42, size: 4, kind: "debris", rot: a });
+        }
+      } else if (e.kind === "brute") {
+        this.shocks.push({ x: e.x, y: e.y, r: e.r * 0.25, vr: 300, life: 0.4, max: 0.4, w: 3 });
+      }
+    }
+    // Hard caps protect long runs from accumulated short-lived effects.
+    if (this.shocks.length > 90) this.shocks.splice(0, this.shocks.length - 90);
+    if (this.bursts.length > 55) this.bursts.splice(0, this.bursts.length - 55);
     this.shake = Math.max(this.shake, big ? 18 : e.kind === "fly" ? 2 : 5);
     this.freeze = Math.max(this.freeze, big ? 0.08 : 0.028);
     this.addText(
