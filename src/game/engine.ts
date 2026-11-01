@@ -2655,7 +2655,7 @@ export class Game {
     clearSpecial(this);
     b.state = "transition";
     b.stateT = b.def.id === "queen" ? 2.6 : b.def.id === "mecha" && next === 1 ? 3.4 : 1.6;
-    if (b.def.id === "mecha") { b.r = next === 0 ? 24 : 88; b.attackCd = 1.6; }
+    if (b.def.id === "mecha") { b.r = next === 0 ? 24 : 88; b.attackCd = 1.6; if (next === 1) { b.targetX = W / 2; b.targetY = 156; } }
     b.attack = null;
     b.telegraph = 0;
     b.emit = null;
@@ -3459,6 +3459,7 @@ export class Game {
         this.bossBanner = 0;
       }
     } else if (b.state === "transition") {
+      if (b.def.id === "mecha" && b.phase === 1) { b.x += (W / 2 - b.x) * Math.min(1, dt * 1.5); b.y += (156 - b.y) * Math.min(1, dt * 1.5); }
       b.stateT -= dt;
       if (b.stateT <= 0) {
         b.state = "fight";
@@ -6754,7 +6755,9 @@ export class Game {
     const b = this.boss!; const ctx = this.ctx; const t = this.time;
     const phase = b.phase; const giant = phase > 0;
     const palette = phase === 2 ? ["#00f5ff", "#ff35d3", "#ffe600"] : phase >= 3 ? ["#7cff54", "#ff4545", "#565cff"] : ["#27313d", "#b8c4ce", "#f4f1e8"];
-    ctx.save(); ctx.translate(b.x, b.y + Math.sin(t * 3) * (giant ? 3 : 7)); ctx.lineJoin = "round"; ctx.lineCap = "round";
+    ctx.save(); ctx.translate(b.x, b.y + Math.sin(t * 3) * (giant ? 3 : 7));
+    const emerge = phase === 1 && b.state === "transition" ? 0.22 + 0.78 * (1 - b.stateT / 3.4) : 1;
+    ctx.scale(1, Math.max(0.12, Math.min(1, emerge))); ctx.lineJoin = "round"; ctx.lineCap = "round";
     if (!giant) {
       ctx.rotate(t * 2.8); ctx.fillStyle = palette[0]; ctx.strokeStyle = palette[1]; ctx.lineWidth = 4;
       for (let i=0;i<12;i++){const a=i*TAU/12;ctx.beginPath();ctx.moveTo(Math.cos(a)*16,Math.sin(a)*16);ctx.lineTo(Math.cos(a)*43,Math.sin(a)*43);ctx.lineTo(Math.cos(a+.16)*16,Math.sin(a+.16)*16);ctx.closePath();ctx.fill();ctx.stroke();}
