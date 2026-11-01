@@ -123,6 +123,8 @@ export interface PublicState {
   perkChoices: PerkId[];
   perkArm: number;
   pageCut: boolean;
+  bossId: string | null;
+  bossPhase: number;
   coop: {
     on: boolean;
     role: "off" | "host" | "guest";
@@ -722,6 +724,8 @@ export class Game {
       perkChoices: [...this.perkChoices],
       perkArm: this.perkArm,
       pageCut: this.pageCut,
+      bossId: this.boss?.def.id ?? null,
+      bossPhase: this.boss?.phase ?? 0,
       coop: {
         on: this.coop.on,
         role: this.netRole,
@@ -7357,7 +7361,7 @@ export class Game {
       }
       ctx.restore();
       ctx.lineWidth = 2;
-      const phaseCount = boss.def.id === "queen" ? 2 : 3;
+      const phaseCount = boss.def.id === "queen" ? 2 : boss.def.phases.length;
       for (let i = 1; i < phaseCount; i++) wline(ctx, bx + (420 * i) / phaseCount, by, bx + (420 * i) / phaseCount, by + 22, r, 1.5);
       ctx.font = `bold 25px "Kelly Slab", serif`;
       ctx.fillText(boss.def.name, W / 2, by - 12);
